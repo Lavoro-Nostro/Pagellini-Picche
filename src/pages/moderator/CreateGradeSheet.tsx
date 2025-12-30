@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -37,6 +37,7 @@ const CreateGradeSheet = () => {
   const [customGradePlayer, setCustomGradePlayer] = useState<string | null>(null);
   const [customGradeCategory, setCustomGradeCategory] = useState<CategoryType | null>(null);
   const [customGradeValue, setCustomGradeValue] = useState('');
+  const [customDialogOpen, setCustomDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const setGrade = (player: string, category: CategoryType, value: number | null) => {
@@ -189,7 +190,12 @@ const CreateGradeSheet = () => {
                           {num}
                         </Button>
                       ))}
-                      <Dialog>
+                      <Dialog open={customDialogOpen && customGradePlayer === player && customGradeCategory === category} onOpenChange={(open) => {
+                        if (!open) {
+                          setCustomDialogOpen(false);
+                          setCustomGradeValue('');
+                        }
+                      }}>
                         <DialogTrigger asChild>
                           <Button
                             variant={grades[player][category] && grades[player][category]! > 10 ? 'default' : 'outline'}
@@ -202,6 +208,7 @@ const CreateGradeSheet = () => {
                             onClick={() => {
                               setCustomGradePlayer(player);
                               setCustomGradeCategory(category);
+                              setCustomDialogOpen(true);
                             }}
                           >
                             {grades[player][category] && grades[player][category]! > 10 
@@ -211,15 +218,14 @@ const CreateGradeSheet = () => {
                         </DialogTrigger>
                         <DialogContent className="bg-card border-border">
                           <DialogHeader>
-                            <DialogTitle className="text-foreground">Voto personalizzato (10-20)</DialogTitle>
+                            <DialogTitle className="text-foreground">Voto personalizzato</DialogTitle>
+                            <DialogDescription className="sr-only">Inserisci un voto personalizzato</DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4">
                             <Input
                               type="number"
-                              min="10.01"
-                              max="20"
                               step="0.5"
-                              placeholder="Inserisci voto (10.01-20)"
+                              placeholder="Inserisci voto"
                               value={customGradeValue}
                               onChange={(e) => setCustomGradeValue(e.target.value)}
                               className="bg-muted border-border text-foreground"
@@ -231,6 +237,7 @@ const CreateGradeSheet = () => {
                                   if (result.valid && result.value !== undefined) {
                                     setGrade(customGradePlayer, customGradeCategory, result.value);
                                     setCustomGradeValue('');
+                                    setCustomDialogOpen(false);
                                   } else {
                                     toast.error(result.error || 'Voto non valido');
                                   }
