@@ -4,13 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, Edit, Trash2, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { devLog } from '@/lib/devLog';
+import { validateGradeSheet } from '@/lib/validation';
 
 interface PlayerGrade {
   id: string;
@@ -64,7 +65,7 @@ const GradeSheetDetail = () => {
       if (gradesError) throw gradesError;
       setGrades(gradesData || []);
     } catch (error) {
-      console.error(error);
+      devLog.error('Error fetching sheet:', error);
       toast.error('Errore nel caricamento');
     } finally {
       setIsLoading(false);
@@ -72,22 +73,29 @@ const GradeSheetDetail = () => {
   };
 
   const handleSave = async () => {
+    // Validate before saving
+    const validation = validateGradeSheet({ sheet_date: editDate, note: editNote || null });
+    if (!validation.success) {
+      toast.error(validation.error.errors[0]?.message || 'Dati non validi');
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('grade_sheets')
         .update({
           sheet_date: editDate,
-          note: editNote || null,
+          note: editNote.trim() || null,
         })
         .eq('id', id);
 
       if (error) throw error;
 
-      setSheet(prev => prev ? { ...prev, sheet_date: editDate, note: editNote || null } : null);
+      setSheet(prev => prev ? { ...prev, sheet_date: editDate, note: editNote.trim() || null } : null);
       setIsEditing(false);
       toast.success('Pagellino aggiornato!');
     } catch (error) {
-      console.error(error);
+      devLog.error('Error saving sheet:', error);
       toast.error('Errore nel salvataggio');
     }
   };
@@ -100,7 +108,7 @@ const GradeSheetDetail = () => {
       toast.success('Pagellino eliminato!');
       navigate('/moderator/history');
     } catch (error) {
-      console.error(error);
+      devLog.error('Error deleting sheet:', error);
       toast.error('Errore nella cancellazione');
     }
   };
@@ -181,16 +189,19 @@ const GradeSheetDetail = () => {
                   type="date"
                   value={editDate}
                   onChange={(e) => setEditDate(e.target.value)}
+                  min="2020-01-01"
                   className="bg-muted border-border text-foreground"
                 />
               </div>
               <div>
-                <label className="text-sm text-muted-foreground mb-2 block">Note</label>
+                <label className="text-sm text-muted-foreground mb-2 block">Note (max 500 caratteri)</label>
                 <Textarea
                   value={editNote}
                   onChange={(e) => setEditNote(e.target.value)}
+                  maxLength={500}
                   className="bg-muted border-border text-foreground"
                 />
+                <p className="text-xs text-muted-foreground mt-1">{editNote.length}/500</p>
               </div>
               <Button onClick={handleSave} className="w-full gradient-primary text-primary-foreground gap-2">
                 <Save className="w-4 h-4" />

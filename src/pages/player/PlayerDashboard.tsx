@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, TrendingUp, Calendar, CalendarX } from 'lucide-react';
+import { devLog } from '@/lib/devLog';
 
 interface PlayerStats {
   presenze: number;
@@ -70,7 +71,7 @@ const PlayerDashboard = () => {
 
       setStats(playerStats);
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      devLog.error('Error fetching stats:', error);
     } finally {
       setIsLoading(false);
     }
