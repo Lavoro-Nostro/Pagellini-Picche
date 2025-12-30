@@ -7,16 +7,14 @@ export const PLAYER_NAMES = [
   'Martina', 'Matteo', 'Nisia', 'Tobias'
 ] as const;
 
-// Grade value schema - allows null or number between 0 and 20
+// Grade value schema - allows null or any non-negative number
 export const gradeValueSchema = z.number()
   .min(0, 'Il voto deve essere almeno 0')
-  .max(20, 'Il voto non può superare 20')
   .nullable();
 
 // Custom grade (>10) schema
 export const customGradeSchema = z.number()
-  .min(10.01, 'Il voto personalizzato deve essere maggiore di 10')
-  .max(20, 'Il voto non può superare 20');
+  .min(10.01, 'Il voto personalizzato deve essere maggiore di 10');
 
 // Date validation - reasonable range
 const minDate = new Date('2020-01-01');
