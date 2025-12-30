@@ -10,12 +10,12 @@ import { z } from 'zod';
 
 // Input validation schema
 const loginSchema = z.object({
-  email: z.string().email('Email non valida'),
+  username: z.string().min(1, 'Username richiesto').max(50, 'Username troppo lungo'),
   password: z.string().min(4, 'La password deve avere almeno 4 caratteri')
 });
 
 const Login = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
@@ -26,7 +26,7 @@ const Login = () => {
     setIsLoading(true);
 
     // Validate inputs
-    const validation = loginSchema.safeParse({ email, password });
+    const validation = loginSchema.safeParse({ username, password });
     if (!validation.success) {
       const errorMessage = validation.error.errors[0]?.message || 'Dati non validi';
       toast.error(errorMessage);
@@ -34,6 +34,8 @@ const Login = () => {
       return;
     }
 
+    // Convert username to email format for Supabase Auth
+    const email = `${username.toLowerCase().trim()}@pagellini.app`;
     const result = await login(email, password);
 
     if (result.success) {
@@ -63,13 +65,13 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
                 required
-                autoComplete="email"
+                autoComplete="username"
               />
             </div>
             <div className="space-y-2">
