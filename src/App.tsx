@@ -2,25 +2,88 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import Login from "./pages/Login";
+import Loading from "./pages/Loading";
+import ModeratorHome from "./pages/moderator/ModeratorHome";
+import CreateGradeSheet from "./pages/moderator/CreateGradeSheet";
+import GradeSheetHistory from "./pages/moderator/GradeSheetHistory";
+import GradeSheetDetail from "./pages/moderator/GradeSheetDetail";
+import PlayerAverages from "./pages/moderator/PlayerAverages";
+import PlayerHome from "./pages/player/PlayerHome";
+import LatestGradeSheet from "./pages/player/LatestGradeSheet";
+import PlayerDashboard from "./pages/player/PlayerDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const ProtectedRoute = ({ children, role }: { children: React.ReactNode; role?: 'moderator' | 'player' }) => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="min-h-screen gradient-dark" />;
+  }
+
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (role && user.role !== role) {
+    return <Navigate to={user.role === 'moderator' ? '/moderator' : '/player'} replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="min-h-screen gradient-dark" />;
+  }
+
+  if (user) {
+    return <Navigate to="/loading" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const AppRoutes = () => {
+  return (
+    <Routes>
+      <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
+      <Route path="/loading" element={<ProtectedRoute><Loading /></ProtectedRoute>} />
+      
+      {/* Moderator Routes */}
+      <Route path="/moderator" element={<ProtectedRoute role="moderator"><ModeratorHome /></ProtectedRoute>} />
+      <Route path="/moderator/create" element={<ProtectedRoute role="moderator"><CreateGradeSheet /></ProtectedRoute>} />
+      <Route path="/moderator/history" element={<ProtectedRoute role="moderator"><GradeSheetHistory /></ProtectedRoute>} />
+      <Route path="/moderator/sheet/:id" element={<ProtectedRoute role="moderator"><GradeSheetDetail /></ProtectedRoute>} />
+      <Route path="/moderator/averages" element={<ProtectedRoute role="moderator"><PlayerAverages /></ProtectedRoute>} />
+      
+      {/* Player Routes */}
+      <Route path="/player" element={<ProtectedRoute role="player"><PlayerHome /></ProtectedRoute>} />
+      <Route path="/player/latest" element={<ProtectedRoute role="player"><LatestGradeSheet /></ProtectedRoute>} />
+      <Route path="/player/dashboard" element={<ProtectedRoute role="player"><PlayerDashboard /></ProtectedRoute>} />
+      
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
