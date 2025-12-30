@@ -69,6 +69,17 @@ const CreateGradeSheet = () => {
       return;
     }
 
+    // Check for incomplete player grades (must have 0 or 4 grades, not 1-3)
+    for (const player of PLAYER_NAMES) {
+      const playerGrade = grades[player];
+      const filledGrades = Object.values(playerGrade).filter(v => v !== null).length;
+      
+      if (filledGrades > 0 && filledGrades < 4) {
+        toast.error(`A ${player} mancano voti`);
+        return;
+      }
+    }
+
     setIsSaving(true);
     try {
       // Create grade sheet
