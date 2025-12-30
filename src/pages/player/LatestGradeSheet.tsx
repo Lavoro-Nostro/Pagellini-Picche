@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { devLog } from '@/lib/devLog';
 
 interface PlayerGrade {
   id: string;
@@ -64,7 +65,7 @@ const LatestGradeSheet = () => {
       if (gradesError) throw gradesError;
       setGrades(gradesData || []);
     } catch (error) {
-      console.error('Error fetching grade sheet:', error);
+      devLog.error('Error fetching grade sheet:', error);
     } finally {
       setIsLoading(false);
     }

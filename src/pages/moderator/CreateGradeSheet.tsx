@@ -9,13 +9,8 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, Save } from 'lucide-react';
 import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
-
-const PLAYERS = [
-  'Alessio Livi', 'Alessio Pecci', 'Alex', 'Elisa', 'Fabio', 'Filippo',
-  'Francesco', 'Gaetano', 'Giorgia', 'Giulia', 'Greta', 'Laura',
-  'Martina', 'Matteo', 'Nisia', 'Tobias'
-];
+import { devLog } from '@/lib/devLog';
+import { PLAYER_NAMES, validateCustomGrade, validateGradeSheet } from '@/lib/validation';
 
 const CATEGORIES = ['ricezione', 'attacco', 'difesa', 'battuta'] as const;
 
@@ -34,7 +29,7 @@ const CreateGradeSheet = () => {
   const [note, setNote] = useState('');
   const [grades, setGrades] = useState<Record<string, PlayerGrade>>(() => {
     const initial: Record<string, PlayerGrade> = {};
-    PLAYERS.forEach(player => {
+    PLAYER_NAMES.forEach(player => {
       initial[player] = { ricezione: null, attacco: null, difesa: null, battuta: null };
     });
     return initial;
@@ -52,18 +47,27 @@ const CreateGradeSheet = () => {
   };
 
   const handleCustomGrade = () => {
-    if (customGradePlayer && customGradeCategory && customGradeValue) {
-      const value = parseFloat(customGradeValue);
-      if (value > 10) {
-        setGrade(customGradePlayer, customGradeCategory, value);
-        setCustomGradeValue('');
-        setCustomGradePlayer(null);
-        setCustomGradeCategory(null);
-      }
+    if (!customGradePlayer || !customGradeCategory || !customGradeValue) return;
+    
+    const result = validateCustomGrade(customGradeValue);
+    if (result.valid && result.value !== undefined) {
+      setGrade(customGradePlayer, customGradeCategory, result.value);
+      setCustomGradeValue('');
+      setCustomGradePlayer(null);
+      setCustomGradeCategory(null);
+    } else {
+      toast.error(result.error || 'Voto non valido');
     }
   };
 
   const handleSave = async () => {
+    // Validate grade sheet data
+    const validation = validateGradeSheet({ sheet_date: date, note: note || null });
+    if (!validation.success) {
+      toast.error(validation.error.errors[0]?.message || 'Dati non validi');
+      return;
+    }
+
     setIsSaving(true);
     try {
       // Create grade sheet
@@ -71,7 +75,7 @@ const CreateGradeSheet = () => {
         .from('grade_sheets')
         .insert({
           sheet_date: date,
-          note: note || null,
+          note: note.trim() || null,
         })
         .select()
         .single();
@@ -79,7 +83,7 @@ const CreateGradeSheet = () => {
       if (sheetError) throw sheetError;
 
       // Create player grades
-      const playerGrades = PLAYERS.map(player => {
+      const playerGrades = PLAYER_NAMES.map(player => {
         const playerGrade = grades[player];
         const hasGrades = Object.values(playerGrade).some(v => v !== null);
         
@@ -112,7 +116,7 @@ const CreateGradeSheet = () => {
       toast.success('Pagellino salvato con successo!');
       navigate('/moderator');
     } catch (error) {
-      console.error(error);
+      devLog.error('Error saving grade sheet:', error);
       toast.error('Errore nel salvataggio');
     } finally {
       setIsSaving(false);
@@ -141,23 +145,26 @@ const CreateGradeSheet = () => {
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
+              min="2020-01-01"
               className="bg-muted border-border text-foreground"
             />
           </div>
 
           <div>
-            <label className="text-sm text-muted-foreground mb-2 block">Note (opzionale)</label>
+            <label className="text-sm text-muted-foreground mb-2 block">Note (opzionale, max 500 caratteri)</label>
             <Textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Aggiungi una nota..."
+              maxLength={500}
               className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
             />
+            <p className="text-xs text-muted-foreground mt-1">{note.length}/500</p>
           </div>
         </div>
 
         <div className="space-y-4">
-          {PLAYERS.map(player => (
+          {PLAYER_NAMES.map(player => (
             <Card key={player} className="bg-card border-border">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg text-foreground">{player}</CardTitle>
@@ -204,14 +211,15 @@ const CreateGradeSheet = () => {
                         </DialogTrigger>
                         <DialogContent className="bg-card border-border">
                           <DialogHeader>
-                            <DialogTitle className="text-foreground">Voto personalizzato</DialogTitle>
+                            <DialogTitle className="text-foreground">Voto personalizzato (10-20)</DialogTitle>
                           </DialogHeader>
                           <div className="space-y-4">
                             <Input
                               type="number"
-                              min="11"
+                              min="10.01"
+                              max="20"
                               step="0.5"
-                              placeholder="Inserisci voto (>10)"
+                              placeholder="Inserisci voto (10.01-20)"
                               value={customGradeValue}
                               onChange={(e) => setCustomGradeValue(e.target.value)}
                               className="bg-muted border-border text-foreground"
@@ -219,12 +227,14 @@ const CreateGradeSheet = () => {
                             <Button
                               onClick={() => {
                                 if (customGradePlayer && customGradeCategory && customGradeValue) {
-                                  const value = parseFloat(customGradeValue);
-                                  if (value > 10) {
-                                    setGrade(customGradePlayer, customGradeCategory, value);
+                                  const result = validateCustomGrade(customGradeValue);
+                                  if (result.valid && result.value !== undefined) {
+                                    setGrade(customGradePlayer, customGradeCategory, result.value);
+                                    setCustomGradeValue('');
+                                  } else {
+                                    toast.error(result.error || 'Voto non valido');
                                   }
                                 }
-                                setCustomGradeValue('');
                               }}
                               className="w-full gradient-primary text-primary-foreground"
                             >

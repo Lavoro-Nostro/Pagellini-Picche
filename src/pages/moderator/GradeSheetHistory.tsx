@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, Calendar, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { devLog } from '@/lib/devLog';
 
 interface GradeSheet {
   id: string;
@@ -33,7 +34,7 @@ const GradeSheetHistory = () => {
       if (error) throw error;
       setSheets(data || []);
     } catch (error) {
-      console.error(error);
+      devLog.error('Error fetching sheets:', error);
     } finally {
       setIsLoading(false);
     }

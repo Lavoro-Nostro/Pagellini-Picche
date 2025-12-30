@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft } from 'lucide-react';
+import { devLog } from '@/lib/devLog';
+import { PLAYER_NAMES } from '@/lib/validation';
 
 interface PlayerStats {
   name: string;
@@ -42,13 +44,7 @@ const PlayerAverages = () => {
       // Calculate stats per player
       const playerMap = new Map<string, { total: number; count: number }>();
       
-      const PLAYERS = [
-        'Alessio Livi', 'Alessio Pecci', 'Alex', 'Elisa', 'Fabio', 'Filippo',
-        'Francesco', 'Gaetano', 'Giorgia', 'Giulia', 'Greta', 'Laura',
-        'Martina', 'Matteo', 'Nisia', 'Tobias'
-      ];
-
-      PLAYERS.forEach(player => {
+      PLAYER_NAMES.forEach(player => {
         playerMap.set(player, { total: 0, count: 0 });
       });
 
@@ -62,7 +58,7 @@ const PlayerAverages = () => {
         }
       });
 
-      const playerStats: PlayerStats[] = PLAYERS.map(name => {
+      const playerStats: PlayerStats[] = PLAYER_NAMES.map(name => {
         const data = playerMap.get(name) || { total: 0, count: 0 };
         return {
           name,
@@ -74,7 +70,7 @@ const PlayerAverages = () => {
 
       setStats(playerStats);
     } catch (error) {
-      console.error(error);
+      devLog.error('Error fetching player stats:', error);
     } finally {
       setIsLoading(false);
     }
