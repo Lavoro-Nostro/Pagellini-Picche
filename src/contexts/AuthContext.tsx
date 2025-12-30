@@ -1,17 +1,22 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { User, Session } from '@supabase/supabase-js';
 
-interface User {
+type AppRole = 'moderator' | 'player';
+
+interface UserProfile {
   id: string;
   username: string;
   name: string;
-  role: 'moderator' | 'player';
+  role: AppRole;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
+  session: Session | null;
+  profile: UserProfile | null;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -19,55 +24,126 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem('pagellini_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
-  }, []);
-
-  const login = async (username: string, password: string) => {
+  const fetchUserProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('users')
+      // Fetch profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
         .select('*')
-        .eq('username', username)
-        .eq('password', password)
+        .eq('id', userId)
         .maybeSingle();
 
-      if (error) {
-        return { success: false, error: 'Errore di connessione' };
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        return null;
       }
 
-      if (!data) {
-        return { success: false, error: 'Credenziali non valide' };
+      // Fetch role from user_roles table
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (roleError) {
+        console.error('Error fetching role:', roleError);
+        return null;
       }
 
-      const userData: User = {
-        id: data.id,
-        username: data.username,
-        name: data.name,
-        role: data.role as 'moderator' | 'player',
-      };
+      if (profileData && roleData) {
+        return {
+          id: profileData.id,
+          username: profileData.username,
+          name: profileData.name,
+          role: roleData.role as AppRole
+        };
+      }
 
-      setUser(userData);
-      localStorage.setItem('pagellini_user', JSON.stringify(userData));
-      return { success: true };
+      return null;
     } catch (err) {
-      return { success: false, error: 'Errore imprevisto' };
+      console.error('Error in fetchUserProfile:', err);
+      return null;
     }
   };
 
-  const logout = () => {
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        // Defer profile fetch with setTimeout to prevent deadlock
+        if (session?.user) {
+          setTimeout(() => {
+            fetchUserProfile(session.user.id).then(setProfile);
+          }, 0);
+        } else {
+          setProfile(null);
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        fetchUserProfile(session.user.id).then((p) => {
+          setProfile(p);
+          setIsLoading(false);
+        });
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      if (data.user) {
+        const userProfile = await fetchUserProfile(data.user.id);
+        if (userProfile) {
+          setProfile(userProfile);
+          return { success: true };
+        } else {
+          // User exists in auth but no profile - logout and return error
+          await supabase.auth.signOut();
+          return { success: false, error: 'Profilo utente non trovato' };
+        }
+      }
+
+      return { success: false, error: 'Errore imprevisto' };
+    } catch (err) {
+      return { success: false, error: 'Errore di connessione' };
+    }
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('pagellini_user');
+    setSession(null);
+    setProfile(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, session, profile, login, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
