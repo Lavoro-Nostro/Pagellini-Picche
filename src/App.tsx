@@ -19,31 +19,33 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children, role }: { children: React.ReactNode; role?: 'moderator' | 'player' }) => {
-  const { user, isLoading } = useAuth();
+  const { user, profile, isLoading } = useAuth();
 
   if (isLoading) {
     return <div className="min-h-screen gradient-dark" />;
   }
 
-  if (!user) {
+  // Check for authenticated user with valid session
+  if (!user || !profile) {
     return <Navigate to="/" replace />;
   }
 
-  if (role && user.role !== role) {
-    return <Navigate to={user.role === 'moderator' ? '/moderator' : '/player'} replace />;
+  // Role check uses server-verified profile data
+  if (role && profile.role !== role) {
+    return <Navigate to={profile.role === 'moderator' ? '/moderator' : '/player'} replace />;
   }
 
   return <>{children}</>;
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useAuth();
+  const { user, profile, isLoading } = useAuth();
 
   if (isLoading) {
     return <div className="min-h-screen gradient-dark" />;
   }
 
-  if (user) {
+  if (user && profile) {
     return <Navigate to="/loading" replace />;
   }
 

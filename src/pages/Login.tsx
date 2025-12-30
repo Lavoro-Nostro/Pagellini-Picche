@@ -6,9 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import logo from '@/assets/logo.jpg';
+import { z } from 'zod';
+
+// Input validation schema
+const loginSchema = z.object({
+  email: z.string().email('Email non valida'),
+  password: z.string().min(4, 'La password deve avere almeno 4 caratteri')
+});
 
 const Login = () => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
@@ -18,7 +25,16 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    const result = await login(username, password);
+    // Validate inputs
+    const validation = loginSchema.safeParse({ email, password });
+    if (!validation.success) {
+      const errorMessage = validation.error.errors[0]?.message || 'Dati non validi';
+      toast.error(errorMessage);
+      setIsLoading(false);
+      return;
+    }
+
+    const result = await login(email, password);
 
     if (result.success) {
       toast.success('Accesso effettuato!');
@@ -47,12 +63,13 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Input
-                type="text"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
                 required
+                autoComplete="email"
               />
             </div>
             <div className="space-y-2">
@@ -63,6 +80,7 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
                 required
+                autoComplete="current-password"
               />
             </div>
             <Button

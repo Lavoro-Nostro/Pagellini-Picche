@@ -26,7 +26,7 @@ interface GradeSheet {
 
 const LatestGradeSheet = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [sheet, setSheet] = useState<GradeSheet | null>(null);
   const [grades, setGrades] = useState<PlayerGrade[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,7 +64,7 @@ const LatestGradeSheet = () => {
       if (gradesError) throw gradesError;
       setGrades(gradesData || []);
     } catch (error) {
-      console.error(error);
+      console.error('Error fetching grade sheet:', error);
     } finally {
       setIsLoading(false);
     }
@@ -129,7 +129,7 @@ const LatestGradeSheet = () => {
 
         <div className="space-y-3">
           {grades.map(grade => {
-            const isCurrentPlayer = grade.player_name === user?.name;
+            const isCurrentPlayer = grade.player_name === profile?.name;
             return (
               <Card 
                 key={grade.id} 

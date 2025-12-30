@@ -6,10 +6,10 @@ import logo from '@/assets/logo.jpg';
 
 const PlayerHome = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { profile, logout } = useAuth();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/');
   };
 
@@ -23,7 +23,7 @@ const PlayerHome = () => {
             className="w-24 h-24 mx-auto rounded-xl shadow-lg"
           />
           <h1 className="text-3xl font-bold text-foreground">ASD Picche</h1>
-          <p className="text-muted-foreground">Benvenuto, {user?.name}!</p>
+          <p className="text-muted-foreground">Benvenuto, {profile?.name}!</p>
           <div className="w-16 h-1 mx-auto gradient-primary rounded-full" />
         </div>
 

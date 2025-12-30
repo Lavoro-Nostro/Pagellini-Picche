@@ -19,16 +19,16 @@ interface PlayerStats {
 
 const PlayerDashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (user) fetchStats();
-  }, [user]);
+    if (profile) fetchStats();
+  }, [profile]);
 
   const fetchStats = async () => {
-    if (!user) return;
+    if (!profile) return;
 
     try {
       // Get total number of grade sheets
@@ -44,7 +44,7 @@ const PlayerDashboard = () => {
       const { data: grades, error: gradesError } = await supabase
         .from('player_grades')
         .select('*')
-        .eq('player_name', user.name);
+        .eq('player_name', profile.name);
 
       if (gradesError) throw gradesError;
 
@@ -70,7 +70,7 @@ const PlayerDashboard = () => {
 
       setStats(playerStats);
     } catch (error) {
-      console.error(error);
+      console.error('Error fetching stats:', error);
     } finally {
       setIsLoading(false);
     }
@@ -100,7 +100,7 @@ const PlayerDashboard = () => {
         </div>
 
         <div className="text-center py-4">
-          <h2 className="text-xl font-semibold text-foreground">{user?.name}</h2>
+          <h2 className="text-xl font-semibold text-foreground">{profile?.name}</h2>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
