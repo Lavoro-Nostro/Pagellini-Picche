@@ -282,16 +282,15 @@ const CreateGradeSheet = () => {
           </div>
         </div>
 
-        {/* Players grouped by role */}
-        {(Object.keys(playersByRole) as PlayerRole[]).map(role => (
-          <div key={role} className="space-y-4">
-            <h2 className="text-lg font-semibold text-primary">{ROLE_DISPLAY_NAMES[role]}</h2>
-            {playersByRole[role].map(player => (
-              <Card key={player} className="bg-card border-border">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-foreground">{player}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
+        {/* Players in alphabetical order */}
+        {ALL_PLAYERS.map(player => (
+          <Card key={player} className="bg-card border-border">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg text-foreground">
+                {player} <span className="text-muted-foreground font-normal">({ROLE_DISPLAY_NAMES[PLAYER_ROLE_MAP[player]]})</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
                   {sheetType === 'classica' ? (
                     <div className="space-y-2">
                       <label className="text-sm text-muted-foreground">Voto Generale</label>
@@ -462,8 +461,6 @@ const CreateGradeSheet = () => {
                 </CardContent>
               </Card>
             ))}
-          </div>
-        ))}
 
         <Button
           onClick={handleSave}

@@ -98,8 +98,25 @@ export const ROLE_DISPLAY_NAMES: Record<PlayerRole, string> = {
   palleggio: 'Palleggio',
 };
 
-// Get all player names
-export const ALL_PLAYERS = Object.keys(PLAYER_ROLE_MAP);
+// Players in alphabetical order as specified
+export const ALL_PLAYERS = [
+  'Alessio Livi',
+  'Alessio Pecci',
+  'Alex',
+  'Elisa',
+  'Fabio',
+  'Filippo',
+  'Francesco',
+  'Gaetano',
+  'Giorgia',
+  'Giulia',
+  'Greta',
+  'Laura',
+  'Martina',
+  'Matteo',
+  'Nisia',
+  'Tobias',
+];
 
 // Get fields for a specific player
 export const getPlayerFields = (playerName: string): string[] => {
