@@ -168,9 +168,23 @@ const CreateGradeSheet = () => {
 
       toast.success('Pagellino salvato! Generazione immagine...');
       
+      // Prepare grades data for image generation
+      const gradesForImage = playerGrades.map(pg => ({
+        player_name: pg.player_name,
+        voto_generale: pg.voto_generale,
+      }));
+      
       // Generate and download PNG
       setTimeout(async () => {
-        const success = await downloadGradeSheetAsPng('grade-sheet-content', `pagellino_${date}`);
+        const success = await downloadGradeSheetAsPng(
+          {
+            date,
+            sheetType: sheetType!,
+            grades: gradesForImage,
+            note: note.trim() || null,
+          },
+          `pagellino_${date}`
+        );
         if (success) {
           toast.success('Immagine scaricata!');
         }
