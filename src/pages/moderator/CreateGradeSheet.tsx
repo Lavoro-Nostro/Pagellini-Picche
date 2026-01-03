@@ -296,7 +296,7 @@ const CreateGradeSheet = () => {
                     <div className="space-y-2">
                       <label className="text-sm text-muted-foreground">Voto Generale</label>
                       <div className="flex flex-wrap gap-1">
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                        {Array.from({ length: 20 }, (_, i) => i + 1).map(num => (
                           <Button
                             key={num}
                             variant={grades[player].voto_generale === num ? 'default' : 'outline'}
@@ -319,10 +319,10 @@ const CreateGradeSheet = () => {
                         }}>
                           <DialogTrigger asChild>
                             <Button
-                              variant={grades[player].voto_generale && grades[player].voto_generale! > 10 ? 'default' : 'outline'}
+                              variant={grades[player].voto_generale && grades[player].voto_generale! > 20 ? 'default' : 'outline'}
                               size="sm"
                               className={`px-2 h-8 text-xs ${
-                                grades[player].voto_generale && grades[player].voto_generale! > 10
+                                grades[player].voto_generale && grades[player].voto_generale! > 20
                                   ? 'gradient-primary text-primary-foreground'
                                   : 'border-border text-foreground hover:bg-muted'
                               }`}
@@ -332,9 +332,9 @@ const CreateGradeSheet = () => {
                                 setCustomDialogOpen(true);
                               }}
                             >
-                              {grades[player].voto_generale && grades[player].voto_generale! > 10 
+                              {grades[player].voto_generale && grades[player].voto_generale! > 20 
                                 ? grades[player].voto_generale 
-                                : '10+'}
+                                : '20+'}
                             </Button>
                           </DialogTrigger>
                           <DialogContent className="bg-card border-border">
@@ -380,7 +380,7 @@ const CreateGradeSheet = () => {
                           {ROLE_CONFIGS[PLAYER_ROLE_MAP[player]].fieldLabels[field]}
                         </label>
                         <div className="flex flex-wrap gap-1">
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                          {Array.from({ length: 20 }, (_, i) => i + 1).map(num => (
                             <Button
                               key={num}
                               variant={grades[player][field] === num ? 'default' : 'outline'}
@@ -403,10 +403,10 @@ const CreateGradeSheet = () => {
                           }}>
                             <DialogTrigger asChild>
                               <Button
-                                variant={grades[player][field] && grades[player][field]! > 10 ? 'default' : 'outline'}
+                                variant={grades[player][field] && grades[player][field]! > 20 ? 'default' : 'outline'}
                                 size="sm"
                                 className={`px-2 h-8 text-xs ${
-                                  grades[player][field] && grades[player][field]! > 10
+                                  grades[player][field] && grades[player][field]! > 20
                                     ? 'gradient-primary text-primary-foreground'
                                     : 'border-border text-foreground hover:bg-muted'
                                 }`}
@@ -416,9 +416,9 @@ const CreateGradeSheet = () => {
                                   setCustomDialogOpen(true);
                                 }}
                               >
-                                {grades[player][field] && grades[player][field]! > 10 
+                                {grades[player][field] && grades[player][field]! > 20 
                                   ? grades[player][field] 
-                                  : '10+'}
+                                  : '20+'}
                               </Button>
                             </DialogTrigger>
                             <DialogContent className="bg-card border-border">
