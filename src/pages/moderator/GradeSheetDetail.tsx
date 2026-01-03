@@ -13,7 +13,7 @@ import { it } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { devLog } from '@/lib/devLog';
 import { validateGradeSheet, validateCustomGrade } from '@/lib/validation';
-import { PLAYER_ROLE_MAP, ROLE_CONFIGS, ROLE_DISPLAY_NAMES, type PlayerRole } from '@/lib/playerRoles';
+import { PLAYER_ROLE_MAP, ROLE_CONFIGS, ROLE_DISPLAY_NAMES, ALL_PLAYERS, type PlayerRole } from '@/lib/playerRoles';
 import { downloadGradeSheetAsPng } from '@/lib/gradeSheetImage';
 
 interface PlayerGrade {
@@ -326,17 +326,19 @@ const GradeSheetDetail = () => {
         </p>
 
         <div className="space-y-3">
-          {grades.map(grade => {
-            const playerFields = getPlayerFields(grade.player_name);
-            const playerEditGrades = editGrades[grade.player_name] || {};
+          {ALL_PLAYERS
+            .filter(playerName => grades.some(g => g.player_name === playerName))
+            .map(playerName => {
+              const grade = grades.find(g => g.player_name === playerName)!;
+              const playerFields = getPlayerFields(grade.player_name);
+              const playerEditGrades = editGrades[grade.player_name] || {};
 
             return (
               <Card key={grade.id} className="bg-card border-border">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-foreground">{grade.player_name}</CardTitle>
-                  <p className="text-xs text-muted-foreground">
-                    {ROLE_DISPLAY_NAMES[PLAYER_ROLE_MAP[grade.player_name] as PlayerRole] || 'N/A'}
-                  </p>
+                  <CardTitle className="text-lg text-foreground">
+                    {grade.player_name} <span className="text-muted-foreground font-normal">({ROLE_DISPLAY_NAMES[PLAYER_ROLE_MAP[grade.player_name] as PlayerRole] || 'N/A'})</span>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {isEditing ? (
