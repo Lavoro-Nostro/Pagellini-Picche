@@ -113,29 +113,6 @@ const GradeSheetImage = forwardRef<HTMLDivElement, GradeSheetImageProps>(
           </div>
         </div>
 
-        {/* Type badge */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            marginBottom: '20px',
-          }}
-        >
-          <span
-            style={{
-              background: 'linear-gradient(135deg, #8a2be2, #4169e1)',
-              color: 'white',
-              padding: '8px 24px',
-              borderRadius: '20px',
-              fontSize: '14px',
-              fontWeight: '600',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-            }}
-          >
-            {sheetType === 'classica' ? 'Classica' : 'Dettagliata'}
-          </span>
-        </div>
 
         {/* Grades list */}
         <div
