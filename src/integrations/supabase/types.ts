@@ -20,6 +20,7 @@ export type Database = {
           id: string
           note: string | null
           sheet_date: string
+          sheet_type: string
           updated_at: string
         }
         Insert: {
@@ -27,6 +28,7 @@ export type Database = {
           id?: string
           note?: string | null
           sheet_date: string
+          sheet_type?: string
           updated_at?: string
         }
         Update: {
@@ -34,42 +36,61 @@ export type Database = {
           id?: string
           note?: string | null
           sheet_date?: string
+          sheet_type?: string
           updated_at?: string
         }
         Relationships: []
       }
       player_grades: {
         Row: {
+          alzate: number | null
+          appoggi_alzate: number | null
+          attacchi: number | null
           attacco: number | null
           battuta: number | null
           created_at: string
           difesa: number | null
           grade_sheet_id: string
           id: string
+          muri: number | null
           player_name: string
+          player_role: string | null
           ricezione: number | null
+          ricezione_difesa: number | null
           voto_generale: number | null
         }
         Insert: {
+          alzate?: number | null
+          appoggi_alzate?: number | null
+          attacchi?: number | null
           attacco?: number | null
           battuta?: number | null
           created_at?: string
           difesa?: number | null
           grade_sheet_id: string
           id?: string
+          muri?: number | null
           player_name: string
+          player_role?: string | null
           ricezione?: number | null
+          ricezione_difesa?: number | null
           voto_generale?: number | null
         }
         Update: {
+          alzate?: number | null
+          appoggi_alzate?: number | null
+          attacchi?: number | null
           attacco?: number | null
           battuta?: number | null
           created_at?: string
           difesa?: number | null
           grade_sheet_id?: string
           id?: string
+          muri?: number | null
           player_name?: string
+          player_role?: string | null
           ricezione?: number | null
+          ricezione_difesa?: number | null
           voto_generale?: number | null
         }
         Relationships: [

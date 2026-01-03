@@ -8,14 +8,21 @@ import { ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { devLog } from '@/lib/devLog';
+import { PLAYER_ROLE_MAP, ROLE_CONFIGS, ROLE_DISPLAY_NAMES, type PlayerRole } from '@/lib/playerRoles';
 
 interface PlayerGrade {
   id: string;
   player_name: string;
+  player_role: string | null;
   ricezione: number | null;
   attacco: number | null;
   difesa: number | null;
   battuta: number | null;
+  attacchi: number | null;
+  ricezione_difesa: number | null;
+  appoggi_alzate: number | null;
+  muri: number | null;
+  alzate: number | null;
   voto_generale: number | null;
 }
 
@@ -23,6 +30,7 @@ interface GradeSheet {
   id: string;
   sheet_date: string;
   note: string | null;
+  sheet_type: string;
 }
 
 const LatestGradeSheet = () => {
@@ -38,7 +46,6 @@ const LatestGradeSheet = () => {
 
   const fetchLatestSheet = async () => {
     try {
-      // Get latest grade sheet
       const { data: sheetData, error: sheetError } = await supabase
         .from('grade_sheets')
         .select('*')
@@ -55,7 +62,6 @@ const LatestGradeSheet = () => {
 
       setSheet(sheetData);
 
-      // Get grades for this sheet
       const { data: gradesData, error: gradesError } = await supabase
         .from('player_grades')
         .select('*')
@@ -69,6 +75,18 @@ const LatestGradeSheet = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const getPlayerFields = (playerName: string): string[] => {
+    const role = PLAYER_ROLE_MAP[playerName] as PlayerRole;
+    if (!role) return [];
+    return ROLE_CONFIGS[role]?.fields || [];
+  };
+
+  const getFieldLabel = (playerName: string, field: string): string => {
+    const role = PLAYER_ROLE_MAP[playerName] as PlayerRole;
+    if (!role) return field;
+    return ROLE_CONFIGS[role]?.fieldLabels[field] || field;
   };
 
   if (isLoading) {
@@ -102,6 +120,8 @@ const LatestGradeSheet = () => {
     );
   }
 
+  const isClassica = sheet.sheet_type === 'classica';
+
   return (
     <div className="min-h-screen gradient-dark p-4">
       <div className="max-w-2xl mx-auto space-y-6">
@@ -128,9 +148,16 @@ const LatestGradeSheet = () => {
           </Card>
         )}
 
+        <p className="text-sm text-muted-foreground">
+          Tipo: {isClassica ? 'Classica' : 'Dettagliata'}
+        </p>
+
         <div className="space-y-3">
           {grades.map(grade => {
             const isCurrentPlayer = grade.player_name === profile?.name;
+            const playerFields = getPlayerFields(grade.player_name);
+            const role = PLAYER_ROLE_MAP[grade.player_name] as PlayerRole;
+
             return (
               <Card 
                 key={grade.id} 
@@ -140,30 +167,34 @@ const LatestGradeSheet = () => {
                   <CardTitle className={`text-lg ${isCurrentPlayer ? 'text-primary font-bold' : 'text-foreground'}`}>
                     {grade.player_name}
                   </CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    {ROLE_DISPLAY_NAMES[role] || 'N/A'}
+                  </p>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
+                  {isClassica ? (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Ricezione:</span>
-                      <span className="text-foreground font-medium">{grade.ricezione ?? '-'}</span>
+                      <span className="text-muted-foreground font-medium">Voto Generale:</span>
+                      <span className="text-primary font-bold text-lg">{grade.voto_generale?.toFixed(2) ?? '-'}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Attacco:</span>
-                      <span className="text-foreground font-medium">{grade.attacco ?? '-'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Difesa:</span>
-                      <span className="text-foreground font-medium">{grade.difesa ?? '-'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Battuta:</span>
-                      <span className="text-foreground font-medium">{grade.battuta ?? '-'}</span>
-                    </div>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-border flex justify-between">
-                    <span className="text-muted-foreground font-medium">Voto Generale:</span>
-                    <span className="text-primary font-bold text-lg">{grade.voto_generale?.toFixed(2) ?? '-'}</span>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 gap-2 text-sm">
+                        {playerFields.map(field => (
+                          <div key={field} className="flex justify-between">
+                            <span className="text-muted-foreground">{getFieldLabel(grade.player_name, field)}:</span>
+                            <span className="text-foreground font-medium">
+                              {grade[field as keyof PlayerGrade] as number ?? '-'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-border flex justify-between">
+                        <span className="text-muted-foreground font-medium">Voto Generale:</span>
+                        <span className="text-primary font-bold text-lg">{grade.voto_generale?.toFixed(2) ?? '-'}</span>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             );
