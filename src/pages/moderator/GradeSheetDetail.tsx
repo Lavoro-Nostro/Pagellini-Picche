@@ -173,9 +173,26 @@ const GradeSheetDetail = () => {
 
       toast.success('Pagellino aggiornato! Generazione immagine...');
       
+      // Prepare grades data for image generation
+      const gradesForImage = grades.map(g => {
+        const playerGrade = editGrades[g.player_name] || {};
+        return {
+          player_name: g.player_name,
+          voto_generale: playerGrade.voto_generale ?? g.voto_generale,
+        };
+      });
+      
       // Generate and download PNG
       setTimeout(async () => {
-        const success = await downloadGradeSheetAsPng('grade-sheet-detail-content', `pagellino_${editDate}`);
+        const success = await downloadGradeSheetAsPng(
+          {
+            date: editDate,
+            sheetType: sheet!.sheet_type as 'classica' | 'dettagliata',
+            grades: gradesForImage,
+            note: editNote.trim() || null,
+          },
+          `pagellino_${editDate}`
+        );
         if (success) {
           toast.success('Immagine scaricata!');
         }
