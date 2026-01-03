@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft } from 'lucide-react';
 import { devLog } from '@/lib/devLog';
-import { PLAYER_NAMES } from '@/lib/validation';
+import { ALL_PLAYERS } from '@/lib/playerRoles';
 
 interface PlayerStats {
   name: string;
@@ -44,7 +44,7 @@ const PlayerAverages = () => {
       // Calculate stats per player
       const playerMap = new Map<string, { total: number; count: number }>();
       
-      PLAYER_NAMES.forEach(player => {
+      ALL_PLAYERS.forEach(player => {
         playerMap.set(player, { total: 0, count: 0 });
       });
 
@@ -58,7 +58,7 @@ const PlayerAverages = () => {
         }
       });
 
-      const playerStats: PlayerStats[] = PLAYER_NAMES.map(name => {
+      const playerStats: PlayerStats[] = ALL_PLAYERS.map(name => {
         const data = playerMap.get(name) || { total: 0, count: 0 };
         return {
           name,
