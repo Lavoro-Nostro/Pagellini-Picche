@@ -6,15 +6,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, TrendingUp, Calendar, CalendarX } from 'lucide-react';
 import { devLog } from '@/lib/devLog';
+import { getPlayerRole, getFieldsForRole, FIELD_LABELS } from '@/lib/playerRoles';
+
+type GradeField = 'battuta' | 'attacchi' | 'ricezione_difesa' | 'difesa' | 'ricezione' | 'appoggi_alzate' | 'muri' | 'alzate';
 
 interface PlayerStats {
   presenze: number;
   assenze: number;
   totalGames: number;
-  mediaRicezione: number | null;
-  mediaAttacco: number | null;
-  mediaDifesa: number | null;
-  mediaBattuta: number | null;
+  fieldAverages: Record<string, number | null>;
   mediaGenerale: number | null;
 }
 
@@ -23,16 +23,21 @@ const PlayerDashboard = () => {
   const { profile } = useAuth();
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [playerFields, setPlayerFields] = useState<GradeField[]>([]);
 
   useEffect(() => {
-    if (profile) fetchStats();
+    if (profile) {
+      const role = getPlayerRole(profile.name);
+      const fields = role ? getFieldsForRole(role) : [];
+      setPlayerFields(fields);
+      fetchStats(fields);
+    }
   }, [profile]);
 
-  const fetchStats = async () => {
+  const fetchStats = async (fields: GradeField[]) => {
     if (!profile) return;
 
     try {
-      // Get total number of grade sheets
       const { data: sheets, error: sheetsError } = await supabase
         .from('grade_sheets')
         .select('id');
@@ -41,7 +46,6 @@ const PlayerDashboard = () => {
 
       const totalGames = sheets?.length || 0;
 
-      // Get player's grades
       const { data: grades, error: gradesError } = await supabase
         .from('player_grades')
         .select('*')
@@ -52,20 +56,23 @@ const PlayerDashboard = () => {
       const presenze = grades?.length || 0;
       const assenze = totalGames - presenze;
 
-      // Calculate averages
       const calcAverage = (values: (number | null)[]) => {
         const valid = values.filter((v): v is number => v !== null);
         return valid.length > 0 ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
       };
 
+      const fieldAverages: Record<string, number | null> = {};
+      fields.forEach(field => {
+        fieldAverages[field] = calcAverage(
+          grades?.map(g => g[field as keyof typeof g] as number | null) || []
+        );
+      });
+
       const playerStats: PlayerStats = {
         presenze,
         assenze,
         totalGames,
-        mediaRicezione: calcAverage(grades?.map(g => g.ricezione) || []),
-        mediaAttacco: calcAverage(grades?.map(g => g.attacco) || []),
-        mediaDifesa: calcAverage(grades?.map(g => g.difesa) || []),
-        mediaBattuta: calcAverage(grades?.map(g => g.battuta) || []),
+        fieldAverages,
         mediaGenerale: calcAverage(grades?.map(g => g.voto_generale) || []),
       };
 
@@ -102,6 +109,9 @@ const PlayerDashboard = () => {
 
         <div className="text-center py-4">
           <h2 className="text-xl font-semibold text-foreground">{profile?.name}</h2>
+          <p className="text-sm text-muted-foreground">
+            {getPlayerRole(profile?.name || '')}
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -123,49 +133,18 @@ const PlayerDashboard = () => {
         </div>
 
         <div className="space-y-3">
-          <Card className="bg-card border-border">
-            <CardContent className="p-4">
-              <div className="flex justify-between items-center">
-                <span className="text-foreground">Media Voti Ricezione</span>
-                <span className="text-xl font-bold text-primary">
-                  {stats?.mediaRicezione?.toFixed(2) ?? '-'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border">
-            <CardContent className="p-4">
-              <div className="flex justify-between items-center">
-                <span className="text-foreground">Media Voti Attacco</span>
-                <span className="text-xl font-bold text-primary">
-                  {stats?.mediaAttacco?.toFixed(2) ?? '-'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border">
-            <CardContent className="p-4">
-              <div className="flex justify-between items-center">
-                <span className="text-foreground">Media Voti Difesa</span>
-                <span className="text-xl font-bold text-primary">
-                  {stats?.mediaDifesa?.toFixed(2) ?? '-'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border">
-            <CardContent className="p-4">
-              <div className="flex justify-between items-center">
-                <span className="text-foreground">Media Voti Battuta</span>
-                <span className="text-xl font-bold text-primary">
-                  {stats?.mediaBattuta?.toFixed(2) ?? '-'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+          {playerFields.map(field => (
+            <Card key={field} className="bg-card border-border">
+              <CardContent className="p-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-foreground">Media {FIELD_LABELS[field]}</span>
+                  <span className="text-xl font-bold text-primary">
+                    {stats?.fieldAverages[field]?.toFixed(2) ?? '-'}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
 
           <Card className="bg-card border-primary/50 border-2">
             <CardContent className="p-4">
