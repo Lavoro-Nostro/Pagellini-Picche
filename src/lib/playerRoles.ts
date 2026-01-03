@@ -114,3 +114,25 @@ export const getPlayerFieldLabels = (playerName: string): Record<string, string>
   if (!role) return {};
   return ROLE_CONFIGS[role].fieldLabels;
 };
+
+// Get player role
+export const getPlayerRole = (playerName: string): PlayerRole | null => {
+  return PLAYER_ROLE_MAP[playerName] || null;
+};
+
+// Get fields for a role
+export const getFieldsForRole = (role: PlayerRole): ('battuta' | 'attacchi' | 'ricezione_difesa' | 'difesa' | 'ricezione' | 'appoggi_alzate' | 'muri' | 'alzate')[] => {
+  return ROLE_CONFIGS[role].fields as ('battuta' | 'attacchi' | 'ricezione_difesa' | 'difesa' | 'ricezione' | 'appoggi_alzate' | 'muri' | 'alzate')[];
+};
+
+// Field labels for display
+export const FIELD_LABELS: Record<string, string> = {
+  battuta: 'Battuta',
+  attacchi: 'Attacchi',
+  ricezione_difesa: 'Ricezione/Difesa',
+  difesa: 'Difesa',
+  ricezione: 'Ricezione',
+  appoggi_alzate: 'Appoggi/Alzate',
+  muri: 'Muri',
+  alzate: 'Alzate',
+};
