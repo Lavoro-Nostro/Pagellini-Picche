@@ -126,6 +126,32 @@ const GradeSheetDetail = () => {
       return;
     }
 
+    const isClassica = sheet?.sheet_type === 'classica';
+
+    // Check if any player has a comment but no grade
+    for (const grade of grades) {
+      const playerComment = editComments[grade.player_name]?.trim();
+      const playerGrade = editGrades[grade.player_name];
+      
+      if (playerComment && playerGrade) {
+        const role = (grade.player_role as PlayerRole) || PLAYER_ROLE_MAP[grade.player_name];
+        
+        if (isClassica) {
+          if (playerGrade.voto_generale === null) {
+            toast.error(`${grade.player_name} ha un commento ma nessun voto`);
+            return;
+          }
+        } else if (role) {
+          const fields = ROLE_CONFIGS[role]?.fields || [];
+          const hasAnyGrade = fields.some(f => playerGrade[f] !== null);
+          if (!hasAnyGrade) {
+            toast.error(`${grade.player_name} ha un commento ma nessun voto`);
+            return;
+          }
+        }
+      }
+    }
+
     setIsSaving(true);
     try {
       // Update grade sheet

@@ -91,6 +91,29 @@ const CreateGradeSheet = () => {
       return;
     }
 
+    // Check if any player has a comment but no grade
+    for (const player of ALL_PLAYERS) {
+      const playerComment = comments[player]?.trim();
+      const playerGrade = grades[player];
+      const role = PLAYER_ROLE_MAP[player];
+      
+      if (playerComment) {
+        if (sheetType === 'classica') {
+          if (playerGrade.voto_generale === null) {
+            toast.error(`${player} ha un commento ma nessun voto`);
+            return;
+          }
+        } else {
+          const fields = ROLE_CONFIGS[role].fields;
+          const hasAnyGrade = fields.some(f => playerGrade[f] !== null);
+          if (!hasAnyGrade) {
+            toast.error(`${player} ha un commento ma nessun voto`);
+            return;
+          }
+        }
+      }
+    }
+
     if (sheetType === 'dettagliata') {
       for (const player of ALL_PLAYERS) {
         const playerGrade = grades[player];
