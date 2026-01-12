@@ -1,12 +1,15 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { FileText, BarChart3, LogOut } from 'lucide-react';
+import { FileText, BarChart3, LogOut, CalendarDays } from 'lucide-react';
 import logo from '@/assets/logo.jpg';
+import NextMatchCard from '@/components/NextMatchCard';
+import { useNextMatch } from '@/hooks/useNextMatch';
 
 const PlayerHome = () => {
   const navigate = useNavigate();
   const { profile, logout } = useAuth();
+  const { nextMatch, isLoading } = useNextMatch();
 
   const handleLogout = async () => {
     await logout();
@@ -46,7 +49,19 @@ const PlayerHome = () => {
           </Button>
         </div>
 
-        <div className="pt-8">
+        <div className="space-y-3">
+          <NextMatchCard match={nextMatch} isLoading={isLoading} />
+          <Button
+            onClick={() => navigate('/player/matches')}
+            variant="outline"
+            className="w-full border-border/50 text-muted-foreground hover:text-foreground gap-2"
+          >
+            <CalendarDays className="w-4 h-4" />
+            Vedi Tutte le Partite
+          </Button>
+        </div>
+
+        <div className="pt-4">
           <Button
             onClick={handleLogout}
             variant="ghost"
