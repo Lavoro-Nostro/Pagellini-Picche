@@ -41,6 +41,48 @@ export type Database = {
         }
         Relationships: []
       }
+      matches: {
+        Row: {
+          created_at: string
+          id: string
+          is_cancelled: boolean
+          is_home: boolean
+          location_address: string
+          location_name: string
+          match_date: string
+          match_time: string
+          notes: string | null
+          opponent: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_cancelled?: boolean
+          is_home?: boolean
+          location_address: string
+          location_name: string
+          match_date: string
+          match_time: string
+          notes?: string | null
+          opponent: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_cancelled?: boolean
+          is_home?: boolean
+          location_address?: string
+          location_name?: string
+          match_date?: string
+          match_time?: string
+          notes?: string | null
+          opponent?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       player_grades: {
         Row: {
           alzate: number | null
