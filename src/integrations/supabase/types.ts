@@ -48,6 +48,7 @@ export type Database = {
           attacchi: number | null
           attacco: number | null
           battuta: number | null
+          commento: string | null
           created_at: string
           difesa: number | null
           grade_sheet_id: string
@@ -65,6 +66,7 @@ export type Database = {
           attacchi?: number | null
           attacco?: number | null
           battuta?: number | null
+          commento?: string | null
           created_at?: string
           difesa?: number | null
           grade_sheet_id: string
@@ -82,6 +84,7 @@ export type Database = {
           attacchi?: number | null
           attacco?: number | null
           battuta?: number | null
+          commento?: string | null
           created_at?: string
           difesa?: number | null
           grade_sheet_id?: string
