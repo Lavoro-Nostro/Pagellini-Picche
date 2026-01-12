@@ -30,6 +30,7 @@ interface PlayerGrade {
   muri: number | null;
   alzate: number | null;
   voto_generale: number | null;
+  commento: string | null;
 }
 
 interface GradeSheet {
@@ -49,6 +50,7 @@ const GradeSheetDetail = () => {
   const [editNote, setEditNote] = useState('');
   const [editDate, setEditDate] = useState('');
   const [editGrades, setEditGrades] = useState<Record<string, Record<string, number | null>>>({});
+  const [editComments, setEditComments] = useState<Record<string, string>>({});
   const [customGradePlayer, setCustomGradePlayer] = useState<string | null>(null);
   const [customGradeCategory, setCustomGradeCategory] = useState<string | null>(null);
   const [customGradeValue, setCustomGradeValue] = useState('');
@@ -82,8 +84,9 @@ const GradeSheetDetail = () => {
       if (gradesError) throw gradesError;
       setGrades(gradesData || []);
 
-      // Initialize edit grades
+      // Initialize edit grades and comments
       const initialEditGrades: Record<string, Record<string, number | null>> = {};
+      const initialEditComments: Record<string, string> = {};
       (gradesData || []).forEach((g: PlayerGrade) => {
         initialEditGrades[g.player_name] = {
           ricezione: g.ricezione,
@@ -97,8 +100,10 @@ const GradeSheetDetail = () => {
           alzate: g.alzate,
           voto_generale: g.voto_generale,
         };
+        initialEditComments[g.player_name] = g.commento || '';
       });
       setEditGrades(initialEditGrades);
+      setEditComments(initialEditComments);
     } catch (error) {
       devLog.error('Error fetching sheet:', error);
       toast.error('Errore nel caricamento');
@@ -152,6 +157,8 @@ const GradeSheetDetail = () => {
             : null;
         }
 
+        const playerComment = editComments[grade.player_name]?.trim() || null;
+        
         const { error: gradeError } = await supabase
           .from('player_grades')
           .update({
@@ -165,6 +172,7 @@ const GradeSheetDetail = () => {
             muri: playerGrade.muri,
             alzate: playerGrade.alzate,
             voto_generale: votoGenerale,
+            commento: playerComment,
           })
           .eq('id', grade.id);
 
@@ -179,6 +187,7 @@ const GradeSheetDetail = () => {
         return {
           player_name: g.player_name,
           voto_generale: playerGrade.voto_generale ?? g.voto_generale,
+          commento: editComments[g.player_name]?.trim() || null,
         };
       });
       
@@ -359,7 +368,20 @@ const GradeSheetDetail = () => {
                 </CardHeader>
                 <CardContent>
                   {isEditing ? (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
+                      {/* Comment field */}
+                      <div className="space-y-2">
+                        <label className="text-sm text-muted-foreground">Commento (opzionale)</label>
+                        <Textarea
+                          value={editComments[grade.player_name] || ''}
+                          onChange={(e) => setEditComments(prev => ({ ...prev, [grade.player_name]: e.target.value }))}
+                          placeholder="Aggiungi un commento per questo giocatore..."
+                          maxLength={300}
+                          className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[60px]"
+                        />
+                        <p className="text-xs text-muted-foreground">{(editComments[grade.player_name] || '').length}/300</p>
+                      </div>
+                      
                       {isClassica ? (
                         <div className="space-y-2">
                           <label className="text-sm text-muted-foreground">Voto Generale</label>
@@ -552,6 +574,12 @@ const GradeSheetDetail = () => {
                             <span className="text-primary font-bold text-lg">{grade.voto_generale?.toFixed(2) ?? '-'}</span>
                           </div>
                         </>
+                      )}
+                      {grade.commento && (
+                        <div className="mt-3 pt-3 border-t border-border">
+                          <p className="text-sm text-muted-foreground mb-1">Commento:</p>
+                          <p className="text-foreground text-sm italic">{grade.commento}</p>
+                        </div>
                       )}
                     </>
                   )}

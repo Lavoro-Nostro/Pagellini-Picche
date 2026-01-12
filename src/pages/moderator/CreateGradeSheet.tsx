@@ -27,6 +27,10 @@ interface PlayerGrade {
   [key: string]: number | null;
 }
 
+interface PlayerComments {
+  [key: string]: string;
+}
+
 const CreateGradeSheet = () => {
   const navigate = useNavigate();
   const [sheetType, setSheetType] = useState<SheetType | null>(null);
@@ -42,6 +46,13 @@ const CreateGradeSheet = () => {
         initial[player][field] = null;
       });
       initial[player].voto_generale = null;
+    });
+    return initial;
+  });
+  const [comments, setComments] = useState<PlayerComments>(() => {
+    const initial: PlayerComments = {};
+    ALL_PLAYERS.forEach(player => {
+      initial[player] = '';
     });
     return initial;
   });
@@ -112,6 +123,7 @@ const CreateGradeSheet = () => {
         const playerGrade = grades[player];
         const role = PLAYER_ROLE_MAP[player];
         const fields = ROLE_CONFIGS[role].fields;
+        const playerComment = comments[player]?.trim() || null;
         
         if (sheetType === 'classica') {
           if (playerGrade.voto_generale === null) return null;
@@ -120,7 +132,7 @@ const CreateGradeSheet = () => {
             grade_sheet_id: sheetData.id,
             player_name: player,
             player_role: role,
-            voto_generale: playerGrade.voto_generale,
+            voto_generale: playerGrade.voto_generale as number,
             ricezione: null,
             attacco: null,
             difesa: null,
@@ -130,6 +142,7 @@ const CreateGradeSheet = () => {
             appoggi_alzate: null,
             muri: null,
             alzate: null,
+            commento: playerComment,
           };
         } else {
           const hasGrades = fields.some(f => playerGrade[f] !== null);
@@ -154,6 +167,7 @@ const CreateGradeSheet = () => {
             appoggi_alzate: playerGrade.appoggi_alzate ?? null,
             muri: playerGrade.muri ?? null,
             alzate: playerGrade.alzate ?? null,
+            commento: playerComment,
           };
         }
       }).filter(Boolean);
@@ -172,6 +186,7 @@ const CreateGradeSheet = () => {
       const gradesForImage = playerGrades.map(pg => ({
         player_name: pg.player_name,
         voto_generale: pg.voto_generale,
+        commento: pg.commento,
       }));
       
       // Generate and download PNG
@@ -304,8 +319,21 @@ const CreateGradeSheet = () => {
                 {player} <span className="text-muted-foreground font-normal">({ROLE_DISPLAY_NAMES[PLAYER_ROLE_MAP[player]]})</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-                  {sheetType === 'classica' ? (
+            <CardContent className="space-y-4">
+              {/* Comment field */}
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">Commento (opzionale)</label>
+                <Textarea
+                  value={comments[player]}
+                  onChange={(e) => setComments(prev => ({ ...prev, [player]: e.target.value }))}
+                  placeholder="Aggiungi un commento per questo giocatore..."
+                  maxLength={300}
+                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[60px]"
+                />
+                <p className="text-xs text-muted-foreground">{comments[player].length}/300</p>
+              </div>
+              
+              {sheetType === 'classica' ? (
                     <div className="space-y-2">
                       <label className="text-sm text-muted-foreground">Voto Generale</label>
                       <div className="flex flex-wrap gap-1">

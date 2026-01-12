@@ -7,7 +7,8 @@ import logoImage from '@/assets/logo.jpg';
 interface PlayerGradeData {
   player_name: string;
   voto_generale: number | null;
-  [key: string]: string | number | null;
+  commento?: string | null;
+  [key: string]: string | number | null | undefined;
 }
 
 interface GradeSheetImageProps {
@@ -136,57 +137,80 @@ const GradeSheetImage = forwardRef<HTMLDivElement, GradeSheetImageProps>(
                   borderRadius: '12px',
                   padding: '12px 20px',
                   display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
+                  flexDirection: 'column',
+                  gap: '8px',
                   borderLeft: '4px solid #8a2be2',
                 }}
               >
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span
-                    style={{
-                      color: 'white',
-                      fontSize: '18px',
-                      fontWeight: '600',
-                    }}
-                  >
-                    {grade.player_name}
-                  </span>
-                  <span
-                    style={{
-                      color: 'rgba(255, 255, 255, 0.5)',
-                      fontSize: '13px',
-                      fontWeight: '400',
-                    }}
-                  >
-                    {roleName}
-                  </span>
-                </div>
                 <div
                   style={{
                     display: 'flex',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '60px',
-                    height: '60px',
-                    background: 'linear-gradient(135deg, #8a2be2, #4169e1)',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 15px rgba(138, 43, 226, 0.3)',
                   }}
                 >
-                  <span
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span
+                      style={{
+                        color: 'white',
+                        fontSize: '18px',
+                        fontWeight: '600',
+                      }}
+                    >
+                      {grade.player_name}
+                    </span>
+                    <span
+                      style={{
+                        color: 'rgba(255, 255, 255, 0.5)',
+                        fontSize: '13px',
+                        fontWeight: '400',
+                      }}
+                    >
+                      {roleName}
+                    </span>
+                  </div>
+                  <div
                     style={{
-                      color: 'white',
-                      fontSize: '24px',
-                      fontWeight: '800',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '60px',
+                      height: '60px',
+                      background: 'linear-gradient(135deg, #8a2be2, #4169e1)',
+                      borderRadius: '12px',
+                      boxShadow: '0 4px 15px rgba(138, 43, 226, 0.3)',
                     }}
                   >
-                    {grade.voto_generale !== null
-                      ? Number.isInteger(grade.voto_generale)
-                        ? grade.voto_generale
-                        : grade.voto_generale.toFixed(1)
-                      : '-'}
-                  </span>
+                    <span
+                      style={{
+                        color: 'white',
+                        fontSize: '24px',
+                        fontWeight: '800',
+                      }}
+                    >
+                      {grade.voto_generale !== null
+                        ? Number.isInteger(grade.voto_generale)
+                          ? grade.voto_generale
+                          : grade.voto_generale.toFixed(1)
+                        : '-'}
+                    </span>
+                  </div>
                 </div>
+                {grade.commento && (
+                  <p
+                    style={{
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      fontSize: '13px',
+                      fontStyle: 'italic',
+                      margin: 0,
+                      paddingLeft: '4px',
+                      borderLeft: '2px solid rgba(138, 43, 226, 0.4)',
+                      lineHeight: '1.4',
+                    }}
+                  >
+                    {grade.commento}
+                  </p>
+                )}
               </div>
             );
           })}

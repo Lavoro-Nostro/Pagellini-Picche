@@ -24,6 +24,7 @@ interface PlayerGrade {
   muri: number | null;
   alzate: number | null;
   voto_generale: number | null;
+  commento: string | null;
 }
 
 interface GradeSheet {
@@ -194,6 +195,12 @@ const LatestGradeSheet = () => {
                         <span className="text-primary font-bold text-lg">{grade.voto_generale?.toFixed(2) ?? '-'}</span>
                       </div>
                     </>
+                  )}
+                  {grade.commento && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <p className="text-sm text-muted-foreground mb-1">Commento:</p>
+                      <p className="text-foreground text-sm italic">{grade.commento}</p>
+                    </div>
                   )}
                 </CardContent>
               </Card>
