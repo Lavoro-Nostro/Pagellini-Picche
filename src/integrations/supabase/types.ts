@@ -21,6 +21,7 @@ export type Database = {
           note: string | null
           sheet_date: string
           sheet_type: string
+          team_id: string
           updated_at: string
         }
         Insert: {
@@ -29,6 +30,7 @@ export type Database = {
           note?: string | null
           sheet_date: string
           sheet_type?: string
+          team_id: string
           updated_at?: string
         }
         Update: {
@@ -37,9 +39,18 @@ export type Database = {
           note?: string | null
           sheet_date?: string
           sheet_type?: string
+          team_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "grade_sheets_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       matches: {
         Row: {
@@ -251,10 +262,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_moderator_team_id: { Args: { _user_id: string }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_user_team_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
