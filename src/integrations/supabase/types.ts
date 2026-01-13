@@ -153,19 +153,51 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          team_id: string | null
           username: string
         }
         Insert: {
           created_at?: string
           id: string
           name: string
+          team_id?: string | null
           username: string
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
+          team_id?: string | null
           username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          id: string
+          moderator_id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          moderator_id: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          moderator_id?: string
+          name?: string
         }
         Relationships: []
       }

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, History, BarChart3, LogOut, CalendarDays, Settings } from 'lucide-react';
+import { Plus, History, BarChart3, LogOut, Settings, Users } from 'lucide-react';
 import logo from '@/assets/logo.jpg';
 import NextMatchCard from '@/components/NextMatchCard';
 import { useNextMatch } from '@/hooks/useNextMatch';
@@ -59,14 +59,24 @@ const ModeratorHome = () => {
 
         <div className="space-y-3">
           <NextMatchCard match={nextMatch} isLoading={isLoading} />
-          <Button
-            onClick={() => navigate('/moderator/matches')}
-            variant="outline"
-            className="w-full border-border/50 text-muted-foreground hover:text-foreground gap-2"
-          >
-            <Settings className="w-4 h-4" />
-            Gestisci Partite
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => navigate('/moderator/matches')}
+              variant="outline"
+              className="flex-1 border-border/50 text-muted-foreground hover:text-foreground gap-2"
+            >
+              <Settings className="w-4 h-4" />
+              Gestisci Partite
+            </Button>
+            <Button
+              onClick={() => navigate('/moderator/players')}
+              variant="outline"
+              className="flex-1 border-border/50 text-muted-foreground hover:text-foreground gap-2"
+            >
+              <Users className="w-4 h-4" />
+              Gestisci Giocatori
+            </Button>
+          </div>
         </div>
 
         <div className="pt-4">
