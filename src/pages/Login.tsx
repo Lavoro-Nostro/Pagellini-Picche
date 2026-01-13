@@ -35,7 +35,7 @@ const Login = () => {
     }
 
     // Convert username to email format for Supabase Auth
-    const email = `${username.toLowerCase().trim()}@pagellini.app`;
+    const email = `${username.toLowerCase().trim()}@asdpicche.local`;
     const result = await login(email, password);
 
     if (result.success) {
