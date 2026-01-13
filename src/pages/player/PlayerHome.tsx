@@ -5,11 +5,13 @@ import { FileText, BarChart3, LogOut, CalendarDays } from 'lucide-react';
 import logo from '@/assets/logo.jpg';
 import NextMatchCard from '@/components/NextMatchCard';
 import { useNextMatch } from '@/hooks/useNextMatch';
+import { usePlayerTeam } from '@/hooks/usePlayerTeam';
 
 const PlayerHome = () => {
   const navigate = useNavigate();
   const { profile, logout } = useAuth();
   const { nextMatch, isLoading } = useNextMatch();
+  const { teamName } = usePlayerTeam();
 
   const handleLogout = async () => {
     await logout();
@@ -25,7 +27,9 @@ const PlayerHome = () => {
             alt="ASD Picche" 
             className="w-24 h-24 mx-auto rounded-xl shadow-lg"
           />
-          <h1 className="text-3xl font-bold text-foreground">ASD Picche</h1>
+          {teamName && (
+            <p className="text-lg font-semibold text-primary">{teamName}</p>
+          )}
           <p className="text-muted-foreground">Benvenuto, {profile?.name}!</p>
           <div className="w-16 h-1 mx-auto gradient-primary rounded-full" />
         </div>
