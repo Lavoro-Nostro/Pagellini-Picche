@@ -20,6 +20,7 @@ import {
   type PlayerRole 
 } from '@/lib/playerRoles';
 import { downloadGradeSheetAsPng } from '@/lib/gradeSheetImage';
+import { useModeratorTeam } from '@/hooks/useModeratorTeam';
 
 type SheetType = 'classica' | 'dettagliata';
 
@@ -33,6 +34,7 @@ interface PlayerComments {
 
 const CreateGradeSheet = () => {
   const navigate = useNavigate();
+  const { teamId } = useModeratorTeam();
   const [sheetType, setSheetType] = useState<SheetType | null>(null);
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [note, setNote] = useState('');
@@ -130,12 +132,19 @@ const CreateGradeSheet = () => {
 
     setIsSaving(true);
     try {
+      if (!teamId) {
+        toast.error('Team non trovato');
+        setIsSaving(false);
+        return;
+      }
+
       const { data: sheetData, error: sheetError } = await supabase
         .from('grade_sheets')
         .insert({
           sheet_date: date,
           note: note.trim() || null,
           sheet_type: sheetType,
+          team_id: teamId,
         })
         .select()
         .single();

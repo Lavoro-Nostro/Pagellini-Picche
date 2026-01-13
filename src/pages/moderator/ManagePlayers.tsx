@@ -54,26 +54,18 @@ const ManagePlayers = () => {
 
       setTeamName(teamData.name);
 
-      // Get players in this team
+      // Get all profiles in this team (excluding the moderator themselves)
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, username, name')
-        .eq('team_id', teamData.id);
+        .eq('team_id', teamData.id)
+        .neq('id', session.user.id);
 
       if (profilesError) {
         console.error('Error fetching players:', profilesError);
+        setPlayers([]);
       } else {
-        // Filter only players (not moderators)
-        const { data: rolesData } = await supabase
-          .from('user_roles')
-          .select('user_id, role');
-
-        const playerIds = new Set(
-          rolesData?.filter(r => r.role === 'player').map(r => r.user_id) || []
-        );
-
-        const teamPlayers = profilesData?.filter(p => playerIds.has(p.id)) || [];
-        setPlayers(teamPlayers);
+        setPlayers(profilesData || []);
       }
     } catch (error) {
       console.error('Error:', error);
