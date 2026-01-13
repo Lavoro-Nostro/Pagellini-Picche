@@ -12,6 +12,7 @@ import GradeSheetHistory from "./pages/moderator/GradeSheetHistory";
 import GradeSheetDetail from "./pages/moderator/GradeSheetDetail";
 import PlayerAverages from "./pages/moderator/PlayerAverages";
 import ManageMatches from "./pages/moderator/ManageMatches";
+import ManagePlayers from "./pages/moderator/ManagePlayers";
 import PlayerHome from "./pages/player/PlayerHome";
 import LatestGradeSheet from "./pages/player/LatestGradeSheet";
 import PlayerDashboard from "./pages/player/PlayerDashboard";
@@ -67,6 +68,7 @@ const AppRoutes = () => {
       <Route path="/moderator/sheet/:id" element={<ProtectedRoute role="moderator"><GradeSheetDetail /></ProtectedRoute>} />
       <Route path="/moderator/averages" element={<ProtectedRoute role="moderator"><PlayerAverages /></ProtectedRoute>} />
       <Route path="/moderator/matches" element={<ProtectedRoute role="moderator"><ManageMatches /></ProtectedRoute>} />
+      <Route path="/moderator/players" element={<ProtectedRoute role="moderator"><ManagePlayers /></ProtectedRoute>} />
       
       {/* Player Routes */}
       <Route path="/player" element={<ProtectedRoute role="player"><PlayerHome /></ProtectedRoute>} />
