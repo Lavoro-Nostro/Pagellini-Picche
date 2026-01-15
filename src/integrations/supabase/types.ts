@@ -64,6 +64,7 @@ export type Database = {
           match_time: string
           notes: string | null
           opponent: string
+          team_id: string
           updated_at: string
         }
         Insert: {
@@ -77,6 +78,7 @@ export type Database = {
           match_time: string
           notes?: string | null
           opponent: string
+          team_id: string
           updated_at?: string
         }
         Update: {
@@ -90,9 +92,18 @@ export type Database = {
           match_time?: string
           notes?: string | null
           opponent?: string
+          team_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "matches_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_grades: {
         Row: {
