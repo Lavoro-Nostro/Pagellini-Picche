@@ -11,6 +11,7 @@ import { ArrowLeft, Calendar, Clock, MapPin, Pencil, Plus, Trash2 } from 'lucide
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { useModeratorTeam } from '@/hooks/useModeratorTeam';
 
 interface Match {
   id: string;
@@ -22,10 +23,12 @@ interface Match {
   is_home: boolean;
   is_cancelled: boolean;
   notes: string | null;
+  team_id: string;
 }
 
 const ManageMatches = () => {
   const navigate = useNavigate();
+  const { teamId, teamName } = useModeratorTeam();
   const [matches, setMatches] = useState<Match[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
@@ -101,6 +104,10 @@ const ManageMatches = () => {
 
     try {
       if (isCreating) {
+        if (!teamId) {
+          toast.error('Team non trovato');
+          return;
+        }
         const { error } = await supabase
           .from('matches')
           .insert({
@@ -111,7 +118,8 @@ const ManageMatches = () => {
             location_address: formData.location_address,
             is_home: formData.is_home,
             is_cancelled: formData.is_cancelled,
-            notes: formData.notes || null
+            notes: formData.notes || null,
+            team_id: teamId
           });
 
         if (error) throw error;
@@ -210,8 +218,8 @@ const ManageMatches = () => {
               const formattedTime = match.match_time.slice(0, 5);
               
               const matchTitle = match.is_home 
-                ? `New Picche vs ${match.opponent}`
-                : `${match.opponent} vs New Picche`;
+                ? `${teamName || 'Noi'} vs ${match.opponent}`
+                : `${match.opponent} vs ${teamName || 'Noi'}`;
 
               return (
                 <div 

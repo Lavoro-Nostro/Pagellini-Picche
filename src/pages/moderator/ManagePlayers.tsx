@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Users, Pencil } from 'lucide-react';
+import { ArrowLeft, Plus, Users, Pencil, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -33,6 +33,9 @@ const ManagePlayers = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editRole, setEditRole] = useState<PlayerRole | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmPlayer, setDeleteConfirmPlayer] = useState<Player | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const [newPlayer, setNewPlayer] = useState({
     username: '',
@@ -166,6 +169,43 @@ const ManagePlayers = () => {
     }
   };
 
+  const handleDeleteClick = (player: Player) => {
+    setDeleteConfirmPlayer(player);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeletePlayer = async () => {
+    if (!deleteConfirmPlayer) return;
+
+    setIsDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId: deleteConfirmPlayer.id }
+      });
+
+      if (error) {
+        console.error('Error deleting player:', error);
+        toast.error('Errore nell\'eliminazione del giocatore');
+        return;
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      toast.success('Giocatore eliminato!');
+      setIsDeleteDialogOpen(false);
+      setDeleteConfirmPlayer(null);
+      fetchPlayers();
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Errore nell\'eliminazione del giocatore');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen gradient-dark p-6">
       <div className="max-w-md mx-auto space-y-6">
@@ -292,6 +332,38 @@ const ManagePlayers = () => {
           </DialogContent>
         </Dialog>
 
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent className="bg-card border-border">
+            <DialogHeader>
+              <DialogTitle>Elimina Giocatore</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <p className="text-muted-foreground">
+                Sei sicuro di voler eliminare <strong className="text-foreground">{deleteConfirmPlayer?.name}</strong>? 
+                Questa azione non può essere annullata.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDeleteDialogOpen(false)}
+                  className="flex-1"
+                >
+                  Annulla
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeletePlayer}
+                  disabled={isDeleting}
+                  className="flex-1"
+                >
+                  {isDeleting ? 'Eliminazione...' : 'Elimina'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <Card className="bg-card/50 border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -319,14 +391,24 @@ const ManagePlayers = () => {
                         @{player.username} • {player.player_role ? ROLE_DISPLAY_NAMES[player.player_role] : 'Nessun ruolo'}
                       </p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEditRole(player)}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEditRole(player)}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteClick(player)}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
