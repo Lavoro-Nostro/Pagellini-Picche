@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    const { username, password, name, role = 'player' } = await req.json()
+    const { username, password, name, role = 'player', player_role = null } = await req.json()
 
     if (!username || !password || !name) {
       return new Response(
@@ -96,14 +96,15 @@ Deno.serve(async (req) => {
 
     const userId = authData.user.id
 
-    // Create profile with team_id
+    // Create profile with team_id and player_role
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .insert({
         id: userId,
         username,
         name,
-        team_id: teamData.id
+        team_id: teamData.id,
+        player_role: player_role
       })
 
     if (profileError) {
