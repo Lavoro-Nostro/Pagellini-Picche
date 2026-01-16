@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export const usePlayerTeam = () => {
   const { session } = useAuth();
+  const [teamId, setTeamId] = useState<string | null>(null);
   const [teamName, setTeamName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -26,6 +27,8 @@ export const usePlayerTeam = () => {
           return;
         }
 
+        setTeamId(profile.team_id);
+
         const { data: team, error: teamError } = await supabase
           .from('teams')
           .select('name')
@@ -45,5 +48,5 @@ export const usePlayerTeam = () => {
     fetchTeam();
   }, [session?.user?.id]);
 
-  return { teamName, isLoading };
+  return { teamId, teamName, isLoading };
 };
