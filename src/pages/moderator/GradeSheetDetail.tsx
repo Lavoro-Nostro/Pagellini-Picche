@@ -13,7 +13,7 @@ import { it } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { devLog } from '@/lib/devLog';
 import { validateGradeSheet, validateCustomGrade } from '@/lib/validation';
-import { PLAYER_ROLE_MAP, ROLE_CONFIGS, ROLE_DISPLAY_NAMES, ALL_PLAYERS, type PlayerRole } from '@/lib/playerRoles';
+import { PLAYER_ROLE_MAP, ROLE_CONFIGS, ROLE_DISPLAY_NAMES, type PlayerRole } from '@/lib/playerRoles';
 import { downloadGradeSheetAsPng } from '@/lib/gradeSheetImage';
 
 interface PlayerGrade {
@@ -256,14 +256,14 @@ const GradeSheetDetail = () => {
     }
   };
 
-  const getPlayerFields = (playerName: string): string[] => {
-    const role = PLAYER_ROLE_MAP[playerName] as PlayerRole;
+  const getFieldsForPlayer = (grade: PlayerGrade): string[] => {
+    const role = (grade.player_role as PlayerRole) || PLAYER_ROLE_MAP[grade.player_name];
     if (!role) return [];
     return ROLE_CONFIGS[role]?.fields || [];
   };
 
-  const getFieldLabel = (playerName: string, field: string): string => {
-    const role = PLAYER_ROLE_MAP[playerName] as PlayerRole;
+  const getFieldLabelForPlayer = (grade: PlayerGrade, field: string): string => {
+    const role = (grade.player_role as PlayerRole) || PLAYER_ROLE_MAP[grade.player_name];
     if (!role) return field;
     return ROLE_CONFIGS[role]?.fieldLabels[field] || field;
   };
@@ -378,18 +378,16 @@ const GradeSheetDetail = () => {
         </p>
 
         <div className="space-y-3">
-          {ALL_PLAYERS
-            .filter(playerName => grades.some(g => g.player_name === playerName))
-            .map(playerName => {
-              const grade = grades.find(g => g.player_name === playerName)!;
-              const playerFields = getPlayerFields(grade.player_name);
+          {grades.map(grade => {
+              const role = (grade.player_role as PlayerRole) || PLAYER_ROLE_MAP[grade.player_name];
+              const playerFields = role ? (ROLE_CONFIGS[role]?.fields || []) : [];
               const playerEditGrades = editGrades[grade.player_name] || {};
 
             return (
               <Card key={grade.id} className="bg-card border-border">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg text-foreground">
-                    {grade.player_name} <span className="text-muted-foreground font-normal">({ROLE_DISPLAY_NAMES[PLAYER_ROLE_MAP[grade.player_name] as PlayerRole] || 'N/A'})</span>
+                    {grade.player_name} <span className="text-muted-foreground font-normal">({role ? ROLE_DISPLAY_NAMES[role] : 'N/A'})</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -493,7 +491,7 @@ const GradeSheetDetail = () => {
                         playerFields.map(field => (
                           <div key={field} className="space-y-2">
                             <label className="text-sm text-muted-foreground">
-                              {getFieldLabel(grade.player_name, field)}
+                              {getFieldLabelForPlayer(grade, field)}
                             </label>
                             <div className="flex flex-wrap gap-1">
                               {Array.from({ length: 20 }, (_, i) => i + 1).map(num => (
@@ -588,7 +586,7 @@ const GradeSheetDetail = () => {
                           <div className="grid grid-cols-1 gap-2 text-sm">
                             {playerFields.map(field => (
                               <div key={field} className="flex justify-between">
-                                <span className="text-muted-foreground">{getFieldLabel(grade.player_name, field)}:</span>
+                                <span className="text-muted-foreground">{getFieldLabelForPlayer(grade, field)}:</span>
                                 <span className="text-foreground font-medium">
                                   {grade[field as keyof PlayerGrade] as number ?? '-'}
                                 </span>
