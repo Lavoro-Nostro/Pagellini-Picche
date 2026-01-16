@@ -76,6 +76,14 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Validate password length (minimum 6 characters)
+    if (password.length < 6) {
+      return new Response(
+        JSON.stringify({ error: 'La password deve essere di almeno 6 caratteri' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Create the auth user with email format
     const email = `${username}@asdpicche.local`
     
