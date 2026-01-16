@@ -48,9 +48,12 @@ const ManageMatches = () => {
   });
 
   const fetchMatches = async () => {
+    if (!teamId) return;
+    
     const { data } = await supabase
       .from('matches')
       .select('*')
+      .eq('team_id', teamId)
       .order('match_date', { ascending: true })
       .order('match_time', { ascending: true });
     
@@ -59,8 +62,10 @@ const ManageMatches = () => {
   };
 
   useEffect(() => {
-    fetchMatches();
-  }, []);
+    if (teamId) {
+      fetchMatches();
+    }
+  }, [teamId]);
 
   const openEditDialog = (match: Match) => {
     setEditingMatch(match);
