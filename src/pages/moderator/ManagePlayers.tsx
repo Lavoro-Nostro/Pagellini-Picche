@@ -94,11 +94,6 @@ const ManagePlayers = () => {
       return;
     }
 
-    if (newPlayer.password.length < 6) {
-      toast.error('La password deve essere di almeno 6 caratteri');
-      return;
-    }
-
     setIsCreating(true);
 
     try {

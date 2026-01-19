@@ -11,7 +11,7 @@ import { z } from 'zod';
 // Input validation schema
 const loginSchema = z.object({
   username: z.string().min(1, 'Username richiesto').max(50, 'Username troppo lungo'),
-  password: z.string().min(4, 'La password deve avere almeno 4 caratteri')
+  password: z.string().min(1, 'Password richiesta')
 });
 
 const Login = () => {
