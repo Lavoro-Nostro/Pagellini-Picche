@@ -76,13 +76,6 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Validate password length (minimum 4 characters)
-    if (password.length < 4) {
-      return new Response(
-        JSON.stringify({ error: 'La password deve essere di almeno 4 caratteri' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
 
     // Create the auth user with email format
     const email = `${username}@asdpicche.local`
