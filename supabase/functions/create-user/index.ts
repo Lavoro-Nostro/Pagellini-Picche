@@ -76,10 +76,10 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Validate password length (minimum 6 characters)
-    if (password.length < 6) {
+    // Validate password length (minimum 4 characters)
+    if (password.length < 4) {
       return new Response(
-        JSON.stringify({ error: 'La password deve essere di almeno 6 caratteri' }),
+        JSON.stringify({ error: 'La password deve essere di almeno 4 caratteri' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
