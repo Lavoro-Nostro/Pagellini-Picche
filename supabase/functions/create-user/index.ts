@@ -67,15 +67,17 @@ Deno.serve(async (req) => {
       )
     }
 
-    const { username, password, name, role = 'player', player_role = null } = await req.json()
+    const { username: rawUsername, password, name, role = 'player', player_role = null } = await req.json()
 
-    if (!username || !password || !name) {
+    if (!rawUsername || !password || !name) {
       return new Response(
         JSON.stringify({ error: 'Username, password and name are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
+    // Normalize username to lowercase to avoid case-sensitivity issues on login
+    const username = rawUsername.toLowerCase().trim()
 
     // Create the auth user with email format
     const email = `${username}@asdpicche.local`
