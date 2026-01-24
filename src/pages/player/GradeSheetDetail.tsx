@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,45 +24,39 @@ interface GradeSheet {
   note: string | null;
 }
 
-const LatestGradeSheet = () => {
+const GradeSheetDetail = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
   const { profile } = useAuth();
   const [sheet, setSheet] = useState<GradeSheet | null>(null);
   const [grades, setGrades] = useState<PlayerGrade[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchLatestSheet();
-  }, []);
+    if (id) fetchSheet();
+  }, [id]);
 
-  const fetchLatestSheet = async () => {
+  const fetchSheet = async () => {
     try {
       const { data: sheetData, error: sheetError } = await supabase
         .from('grade_sheets')
-        .select('id, sheet_date, note')
-        .order('sheet_date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .select('*')
+        .eq('id', id)
+        .single();
 
       if (sheetError) throw sheetError;
-
-      if (!sheetData) {
-        setIsLoading(false);
-        return;
-      }
-
       setSheet(sheetData);
 
       const { data: gradesData, error: gradesError } = await supabase
         .from('player_grades')
         .select('id, player_name, player_role, voto_generale, commento')
-        .eq('grade_sheet_id', sheetData.id)
+        .eq('grade_sheet_id', id)
         .order('player_name');
 
       if (gradesError) throw gradesError;
       setGrades(gradesData || []);
     } catch (error) {
-      devLog.error('Error fetching grade sheet:', error);
+      devLog.error('Error fetching sheet:', error);
     } finally {
       setIsLoading(false);
     }
@@ -78,23 +72,8 @@ const LatestGradeSheet = () => {
 
   if (!sheet) {
     return (
-      <div className="min-h-screen gradient-dark p-4">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/player')}
-              className="text-foreground"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <h1 className="text-2xl font-bold text-foreground">Ultimo Pagellino</h1>
-          </div>
-          <div className="text-center py-12 text-muted-foreground">
-            Nessun pagellino disponibile
-          </div>
-        </div>
+      <div className="min-h-screen gradient-dark flex items-center justify-center">
+        <p className="text-muted-foreground">Pagellino non trovato</p>
       </div>
     );
   }
@@ -106,7 +85,7 @@ const LatestGradeSheet = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate('/player')}
+            onClick={() => navigate('/player/history')}
             className="text-foreground"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -164,4 +143,4 @@ const LatestGradeSheet = () => {
   );
 };
 
-export default LatestGradeSheet;
+export default GradeSheetDetail;

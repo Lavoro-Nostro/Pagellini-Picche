@@ -4,31 +4,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Edit, Trash2, Save } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Save, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { devLog } from '@/lib/devLog';
-import { validateGradeSheet, validateCustomGrade } from '@/lib/validation';
-import { PLAYER_ROLE_MAP, ROLE_CONFIGS, ROLE_DISPLAY_NAMES, type PlayerRole } from '@/lib/playerRoles';
+import { validateGradeSheet } from '@/lib/validation';
+import { PLAYER_ROLE_MAP, ROLE_DISPLAY_NAMES, type PlayerRole } from '@/lib/playerRoles';
 import { downloadGradeSheetAsPng } from '@/lib/gradeSheetImage';
 
 interface PlayerGrade {
   id: string;
   player_name: string;
   player_role: string | null;
-  ricezione: number | null;
-  attacco: number | null;
-  difesa: number | null;
-  battuta: number | null;
-  attacchi: number | null;
-  ricezione_difesa: number | null;
-  appoggi_alzate: number | null;
-  muri: number | null;
-  alzate: number | null;
   voto_generale: number | null;
   commento: string | null;
 }
@@ -37,7 +27,6 @@ interface GradeSheet {
   id: string;
   sheet_date: string;
   note: string | null;
-  sheet_type: string;
 }
 
 const GradeSheetDetail = () => {
@@ -49,12 +38,8 @@ const GradeSheetDetail = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editNote, setEditNote] = useState('');
   const [editDate, setEditDate] = useState('');
-  const [editGrades, setEditGrades] = useState<Record<string, Record<string, number | null>>>({});
+  const [editGrades, setEditGrades] = useState<Record<string, number | null>>({});
   const [editComments, setEditComments] = useState<Record<string, string>>({});
-  const [customGradePlayer, setCustomGradePlayer] = useState<string | null>(null);
-  const [customGradeCategory, setCustomGradeCategory] = useState<string | null>(null);
-  const [customGradeValue, setCustomGradeValue] = useState('');
-  const [customDialogOpen, setCustomDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const gradeSheetRef = useRef<HTMLDivElement>(null);
 
@@ -66,7 +51,7 @@ const GradeSheetDetail = () => {
     try {
       const { data: sheetData, error: sheetError } = await supabase
         .from('grade_sheets')
-        .select('*')
+        .select('id, sheet_date, note')
         .eq('id', id)
         .single();
 
@@ -77,7 +62,7 @@ const GradeSheetDetail = () => {
 
       const { data: gradesData, error: gradesError } = await supabase
         .from('player_grades')
-        .select('*')
+        .select('id, player_name, player_role, voto_generale, commento')
         .eq('grade_sheet_id', id)
         .order('player_name');
 
@@ -85,21 +70,10 @@ const GradeSheetDetail = () => {
       setGrades(gradesData || []);
 
       // Initialize edit grades and comments
-      const initialEditGrades: Record<string, Record<string, number | null>> = {};
+      const initialEditGrades: Record<string, number | null> = {};
       const initialEditComments: Record<string, string> = {};
       (gradesData || []).forEach((g: PlayerGrade) => {
-        initialEditGrades[g.player_name] = {
-          ricezione: g.ricezione,
-          attacco: g.attacco,
-          difesa: g.difesa,
-          battuta: g.battuta,
-          attacchi: g.attacchi,
-          ricezione_difesa: g.ricezione_difesa,
-          appoggi_alzate: g.appoggi_alzate,
-          muri: g.muri,
-          alzate: g.alzate,
-          voto_generale: g.voto_generale,
-        };
+        initialEditGrades[g.player_name] = g.voto_generale;
         initialEditComments[g.player_name] = g.commento || '';
       });
       setEditGrades(initialEditGrades);
@@ -112,11 +86,8 @@ const GradeSheetDetail = () => {
     }
   };
 
-  const setGrade = (player: string, field: string, value: number | null) => {
-    setEditGrades(prev => ({
-      ...prev,
-      [player]: { ...prev[player], [field]: value }
-    }));
+  const setGrade = (player: string, value: number | null) => {
+    setEditGrades(prev => ({ ...prev, [player]: value }));
   };
 
   const handleSave = async () => {
@@ -126,29 +97,14 @@ const GradeSheetDetail = () => {
       return;
     }
 
-    const isClassica = sheet?.sheet_type === 'classica';
-
     // Check if any player has a comment but no grade
     for (const grade of grades) {
       const playerComment = editComments[grade.player_name]?.trim();
-      const playerGrade = editGrades[grade.player_name];
+      const playerGradeValue = editGrades[grade.player_name];
       
-      if (playerComment && playerGrade) {
-        const role = (grade.player_role as PlayerRole) || PLAYER_ROLE_MAP[grade.player_name];
-        
-        if (isClassica) {
-          if (playerGrade.voto_generale === null) {
-            toast.error(`${grade.player_name} ha un commento ma nessun voto`);
-            return;
-          }
-        } else if (role) {
-          const fields = ROLE_CONFIGS[role]?.fields || [];
-          const hasAnyGrade = fields.some(f => playerGrade[f] !== null);
-          if (!hasAnyGrade) {
-            toast.error(`${grade.player_name} ha un commento ma nessun voto`);
-            return;
-          }
-        }
+      if (playerComment && playerGradeValue === null) {
+        toast.error(`${grade.player_name} ha un commento ma nessun voto`);
+        return;
       }
     }
 
@@ -167,36 +123,12 @@ const GradeSheetDetail = () => {
 
       // Update player grades
       for (const grade of grades) {
-        const playerGrade = editGrades[grade.player_name];
-        if (!playerGrade) continue;
-
-        const role = (grade.player_role as PlayerRole) || PLAYER_ROLE_MAP[grade.player_name];
-        const isClassica = sheet?.sheet_type === 'classica';
-        
-        let votoGenerale = playerGrade.voto_generale;
-        
-        if (!isClassica && role) {
-          const fields = ROLE_CONFIGS[role]?.fields || [];
-          const validGrades = fields.map(f => playerGrade[f]).filter(v => v !== null) as number[];
-          votoGenerale = validGrades.length > 0 
-            ? Math.round((validGrades.reduce((a, b) => a + b, 0) / validGrades.length) * 100) / 100
-            : null;
-        }
-
+        const votoGenerale = editGrades[grade.player_name];
         const playerComment = editComments[grade.player_name]?.trim() || null;
         
         const { error: gradeError } = await supabase
           .from('player_grades')
           .update({
-            ricezione: playerGrade.ricezione,
-            attacco: playerGrade.attacco,
-            difesa: playerGrade.difesa,
-            battuta: playerGrade.battuta,
-            attacchi: playerGrade.attacchi,
-            ricezione_difesa: playerGrade.ricezione_difesa,
-            appoggi_alzate: playerGrade.appoggi_alzate,
-            muri: playerGrade.muri,
-            alzate: playerGrade.alzate,
             voto_generale: votoGenerale,
             commento: playerComment,
           })
@@ -208,21 +140,18 @@ const GradeSheetDetail = () => {
       toast.success('Pagellino aggiornato! Generazione immagine...');
       
       // Prepare grades data for image generation
-      const gradesForImage = grades.map(g => {
-        const playerGrade = editGrades[g.player_name] || {};
-        return {
-          player_name: g.player_name,
-          voto_generale: playerGrade.voto_generale ?? g.voto_generale,
-          commento: editComments[g.player_name]?.trim() || null,
-        };
-      });
+      const gradesForImage = grades.map(g => ({
+        player_name: g.player_name,
+        voto_generale: editGrades[g.player_name] ?? g.voto_generale,
+        commento: editComments[g.player_name]?.trim() || null,
+      }));
       
       // Generate and download PNG
       setTimeout(async () => {
         const success = await downloadGradeSheetAsPng(
           {
             date: editDate,
-            sheetType: sheet!.sheet_type as 'classica' | 'dettagliata',
+            sheetType: 'classica',
             grades: gradesForImage,
             note: editNote.trim() || null,
           },
@@ -256,18 +185,6 @@ const GradeSheetDetail = () => {
     }
   };
 
-  const getFieldsForPlayer = (grade: PlayerGrade): string[] => {
-    const role = (grade.player_role as PlayerRole) || PLAYER_ROLE_MAP[grade.player_name];
-    if (!role) return [];
-    return ROLE_CONFIGS[role]?.fields || [];
-  };
-
-  const getFieldLabelForPlayer = (grade: PlayerGrade, field: string): string => {
-    const role = (grade.player_role as PlayerRole) || PLAYER_ROLE_MAP[grade.player_name];
-    if (!role) return field;
-    return ROLE_CONFIGS[role]?.fieldLabels[field] || field;
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen gradient-dark flex items-center justify-center">
@@ -283,8 +200,6 @@ const GradeSheetDetail = () => {
       </div>
     );
   }
-
-  const isClassica = sheet.sheet_type === 'classica';
 
   return (
     <div className="min-h-screen gradient-dark p-4">
@@ -373,15 +288,9 @@ const GradeSheetDetail = () => {
           </Card>
         )}
 
-        <p className="text-sm text-muted-foreground">
-          Tipo: {isClassica ? 'Classica' : 'Dettagliata'}
-        </p>
-
         <div className="space-y-3">
           {grades.map(grade => {
-              const role = (grade.player_role as PlayerRole) || PLAYER_ROLE_MAP[grade.player_name];
-              const playerFields = role ? (ROLE_CONFIGS[role]?.fields || []) : [];
-              const playerEditGrades = editGrades[grade.player_name] || {};
+            const role = (grade.player_role as PlayerRole) || PLAYER_ROLE_MAP[grade.player_name];
 
             return (
               <Card key={grade.id} className="bg-card border-border">
@@ -406,199 +315,33 @@ const GradeSheetDetail = () => {
                         <p className="text-xs text-muted-foreground">{(editComments[grade.player_name] || '').length}/300</p>
                       </div>
                       
-                      {isClassica ? (
-                        <div className="space-y-2">
-                          <label className="text-sm text-muted-foreground">Voto Generale</label>
-                          <div className="flex flex-wrap gap-1">
-                            {Array.from({ length: 20 }, (_, i) => i + 1).map(num => (
-                              <Button
-                                key={num}
-                                variant={playerEditGrades.voto_generale === num ? 'default' : 'outline'}
-                                size="sm"
-                                className={`w-8 h-8 p-0 text-xs ${
-                                  playerEditGrades.voto_generale === num 
-                                    ? 'gradient-primary text-primary-foreground' 
-                                    : 'border-border text-foreground hover:bg-muted'
-                                }`}
-                                onClick={() => setGrade(grade.player_name, 'voto_generale', playerEditGrades.voto_generale === num ? null : num)}
-                              >
-                                {num}
-                              </Button>
-                            ))}
-                            <Dialog open={customDialogOpen && customGradePlayer === grade.player_name && customGradeCategory === 'voto_generale'} onOpenChange={(open) => {
-                              if (!open) {
-                                setCustomDialogOpen(false);
-                                setCustomGradeValue('');
-                              }
-                            }}>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant={playerEditGrades.voto_generale && playerEditGrades.voto_generale > 20 ? 'default' : 'outline'}
-                                  size="sm"
-                                  className={`px-2 h-8 text-xs ${
-                                    playerEditGrades.voto_generale && playerEditGrades.voto_generale > 20
-                                      ? 'gradient-primary text-primary-foreground'
-                                      : 'border-border text-foreground hover:bg-muted'
-                                  }`}
-                                  onClick={() => {
-                                    setCustomGradePlayer(grade.player_name);
-                                    setCustomGradeCategory('voto_generale');
-                                    setCustomDialogOpen(true);
-                                  }}
-                                >
-                                  {playerEditGrades.voto_generale && playerEditGrades.voto_generale > 20 
-                                    ? playerEditGrades.voto_generale 
-                                    : '20+'}
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="bg-card border-border">
-                                <DialogHeader>
-                                  <DialogTitle className="text-foreground">Voto personalizzato</DialogTitle>
-                                  <DialogDescription className="sr-only">Inserisci un voto personalizzato</DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4">
-                                  <Input
-                                    type="number"
-                                    step="0.5"
-                                    placeholder="Inserisci voto"
-                                    value={customGradeValue}
-                                    onChange={(e) => setCustomGradeValue(e.target.value)}
-                                    className="bg-muted border-border text-foreground"
-                                  />
-                                  <Button
-                                    onClick={() => {
-                                      if (customGradePlayer && customGradeCategory && customGradeValue) {
-                                        const result = validateCustomGrade(customGradeValue);
-                                        if (result.valid && result.value !== undefined) {
-                                          setGrade(customGradePlayer, customGradeCategory, result.value);
-                                          setCustomGradeValue('');
-                                          setCustomDialogOpen(false);
-                                        } else {
-                                          toast.error(result.error || 'Voto non valido');
-                                        }
-                                      }
-                                    }}
-                                    className="w-full gradient-primary text-primary-foreground"
-                                  >
-                                    Conferma
-                                  </Button>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                          </div>
+                      <div className="space-y-2">
+                        <label className="text-sm text-muted-foreground">Voto Generale (1-10)</label>
+                        <div className="flex flex-wrap gap-1">
+                          {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
+                            <Button
+                              key={num}
+                              variant={editGrades[grade.player_name] === num ? 'default' : 'outline'}
+                              size="sm"
+                              className={`w-10 h-10 p-0 text-sm ${
+                                editGrades[grade.player_name] === num 
+                                  ? 'gradient-primary text-primary-foreground' 
+                                  : 'border-border text-foreground hover:bg-muted'
+                              }`}
+                              onClick={() => setGrade(grade.player_name, editGrades[grade.player_name] === num ? null : num)}
+                            >
+                              {num}
+                            </Button>
+                          ))}
                         </div>
-                      ) : (
-                        playerFields.map(field => (
-                          <div key={field} className="space-y-2">
-                            <label className="text-sm text-muted-foreground">
-                              {getFieldLabelForPlayer(grade, field)}
-                            </label>
-                            <div className="flex flex-wrap gap-1">
-                              {Array.from({ length: 20 }, (_, i) => i + 1).map(num => (
-                                <Button
-                                  key={num}
-                                  variant={playerEditGrades[field] === num ? 'default' : 'outline'}
-                                  size="sm"
-                                  className={`w-8 h-8 p-0 text-xs ${
-                                    playerEditGrades[field] === num 
-                                      ? 'gradient-primary text-primary-foreground' 
-                                      : 'border-border text-foreground hover:bg-muted'
-                                  }`}
-                                  onClick={() => setGrade(grade.player_name, field, playerEditGrades[field] === num ? null : num)}
-                                >
-                                  {num}
-                                </Button>
-                              ))}
-                              <Dialog open={customDialogOpen && customGradePlayer === grade.player_name && customGradeCategory === field} onOpenChange={(open) => {
-                                if (!open) {
-                                  setCustomDialogOpen(false);
-                                  setCustomGradeValue('');
-                                }
-                              }}>
-                                <DialogTrigger asChild>
-                                  <Button
-                                    variant={playerEditGrades[field] && playerEditGrades[field]! > 20 ? 'default' : 'outline'}
-                                    size="sm"
-                                    className={`px-2 h-8 text-xs ${
-                                      playerEditGrades[field] && playerEditGrades[field]! > 20
-                                        ? 'gradient-primary text-primary-foreground'
-                                        : 'border-border text-foreground hover:bg-muted'
-                                    }`}
-                                    onClick={() => {
-                                      setCustomGradePlayer(grade.player_name);
-                                      setCustomGradeCategory(field);
-                                      setCustomDialogOpen(true);
-                                    }}
-                                  >
-                                    {playerEditGrades[field] && playerEditGrades[field]! > 20 
-                                      ? playerEditGrades[field] 
-                                      : '20+'}
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="bg-card border-border">
-                                  <DialogHeader>
-                                    <DialogTitle className="text-foreground">Voto personalizzato</DialogTitle>
-                                    <DialogDescription className="sr-only">Inserisci un voto personalizzato</DialogDescription>
-                                  </DialogHeader>
-                                  <div className="space-y-4">
-                                    <Input
-                                      type="number"
-                                      step="0.5"
-                                      placeholder="Inserisci voto"
-                                      value={customGradeValue}
-                                      onChange={(e) => setCustomGradeValue(e.target.value)}
-                                      className="bg-muted border-border text-foreground"
-                                    />
-                                    <Button
-                                      onClick={() => {
-                                        if (customGradePlayer && customGradeCategory && customGradeValue) {
-                                          const result = validateCustomGrade(customGradeValue);
-                                          if (result.valid && result.value !== undefined) {
-                                            setGrade(customGradePlayer, customGradeCategory, result.value);
-                                            setCustomGradeValue('');
-                                            setCustomDialogOpen(false);
-                                          } else {
-                                            toast.error(result.error || 'Voto non valido');
-                                          }
-                                        }
-                                      }}
-                                      className="w-full gradient-primary text-primary-foreground"
-                                    >
-                                      Conferma
-                                    </Button>
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
-                            </div>
-                          </div>
-                        ))
-                      )}
+                      </div>
                     </div>
                   ) : (
                     <>
-                      {isClassica ? (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground font-medium">Voto Generale:</span>
-                          <span className="text-primary font-bold text-lg">{grade.voto_generale?.toFixed(2) ?? '-'}</span>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="grid grid-cols-1 gap-2 text-sm">
-                            {playerFields.map(field => (
-                              <div key={field} className="flex justify-between">
-                                <span className="text-muted-foreground">{getFieldLabelForPlayer(grade, field)}:</span>
-                                <span className="text-foreground font-medium">
-                                  {grade[field as keyof PlayerGrade] as number ?? '-'}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="mt-3 pt-3 border-t border-border flex justify-between">
-                            <span className="text-muted-foreground font-medium">Voto Generale:</span>
-                            <span className="text-primary font-bold text-lg">{grade.voto_generale?.toFixed(2) ?? '-'}</span>
-                          </div>
-                        </>
-                      )}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground font-medium">Voto Generale:</span>
+                        <span className="text-primary font-bold text-lg">{grade.voto_generale ?? '-'}</span>
+                      </div>
                       {grade.commento && (
                         <div className="mt-3 pt-3 border-t border-border">
                           <p className="text-sm text-muted-foreground mb-1">Commento:</p>
@@ -619,8 +362,17 @@ const GradeSheetDetail = () => {
             disabled={isSaving}
             className="w-full h-14 gradient-primary text-primary-foreground font-semibold text-lg gap-3"
           >
-            <Save className="w-5 h-5" />
-            {isSaving ? 'Salvataggio...' : 'Salva Modifiche'}
+            {isSaving ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Salvataggio...
+              </>
+            ) : (
+              <>
+                <Save className="w-5 h-5" />
+                Salva Modifiche
+              </>
+            )}
           </Button>
         )}
       </div>
