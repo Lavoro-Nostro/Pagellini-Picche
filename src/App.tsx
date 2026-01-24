@@ -17,6 +17,9 @@ import PlayerHome from "./pages/player/PlayerHome";
 import LatestGradeSheet from "./pages/player/LatestGradeSheet";
 import PlayerDashboard from "./pages/player/PlayerDashboard";
 import MatchesList from "./pages/player/MatchesList";
+import PlayerGradeSheetHistory from "./pages/player/GradeSheetHistory";
+import PlayerGradeSheetDetail from "./pages/player/GradeSheetDetail";
+import TeamPerformance from "./pages/player/TeamPerformance";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -73,7 +76,10 @@ const AppRoutes = () => {
       {/* Player Routes */}
       <Route path="/player" element={<ProtectedRoute role="player"><PlayerHome /></ProtectedRoute>} />
       <Route path="/player/latest" element={<ProtectedRoute role="player"><LatestGradeSheet /></ProtectedRoute>} />
+      <Route path="/player/history" element={<ProtectedRoute role="player"><PlayerGradeSheetHistory /></ProtectedRoute>} />
+      <Route path="/player/sheet/:id" element={<ProtectedRoute role="player"><PlayerGradeSheetDetail /></ProtectedRoute>} />
       <Route path="/player/dashboard" element={<ProtectedRoute role="player"><PlayerDashboard /></ProtectedRoute>} />
+      <Route path="/player/team-performance" element={<ProtectedRoute role="player"><TeamPerformance /></ProtectedRoute>} />
       <Route path="/player/matches" element={<ProtectedRoute role="player"><MatchesList /></ProtectedRoute>} />
       
       <Route path="*" element={<NotFound />} />

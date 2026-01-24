@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { FileText, BarChart3, LogOut, CalendarDays } from 'lucide-react';
+import { FileText, BarChart3, LogOut, CalendarDays, History, TrendingUp } from 'lucide-react';
 import logo from '@/assets/logo.jpg';
 import NextMatchCard from '@/components/NextMatchCard';
 import { useNextMatch } from '@/hooks/useNextMatch';
@@ -44,12 +44,30 @@ const PlayerHome = () => {
           </Button>
 
           <Button
+            onClick={() => navigate('/player/history')}
+            variant="outline"
+            className="w-full h-14 border-primary/50 text-foreground font-semibold text-lg gap-3 hover:bg-primary/10"
+          >
+            <History className="w-5 h-5" />
+            Storico Pagellini
+          </Button>
+
+          <Button
             onClick={() => navigate('/player/dashboard')}
             variant="outline"
             className="w-full h-14 border-secondary/50 text-foreground font-semibold text-lg gap-3 hover:bg-secondary/10"
           >
             <BarChart3 className="w-5 h-5" />
             La Mia Dashboard
+          </Button>
+
+          <Button
+            onClick={() => navigate('/player/team-performance')}
+            variant="outline"
+            className="w-full h-14 border-secondary/50 text-foreground font-semibold text-lg gap-3 hover:bg-secondary/10"
+          >
+            <TrendingUp className="w-5 h-5" />
+            Andamento Squadra
           </Button>
         </div>
 

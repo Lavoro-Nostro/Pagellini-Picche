@@ -5,50 +5,56 @@ import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, TrendingUp, Calendar, CalendarX } from 'lucide-react';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
 import { devLog } from '@/lib/devLog';
-import { getPlayerRole, getFieldsForRole, FIELD_LABELS } from '@/lib/playerRoles';
-
-type GradeField = 'battuta' | 'attacchi' | 'ricezione_difesa' | 'difesa' | 'ricezione' | 'appoggi_alzate' | 'muri' | 'alzate';
+import { getPlayerRole } from '@/lib/playerRoles';
+import PlayerPerformanceChart from '@/components/PlayerPerformanceChart';
 
 interface PlayerStats {
   presenze: number;
   assenze: number;
   totalGames: number;
-  fieldAverages: Record<string, number | null>;
   mediaGenerale: number | null;
+}
+
+interface ChartDataPoint {
+  date: string;
+  displayDate: string;
+  average: number;
 }
 
 const PlayerDashboard = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const [stats, setStats] = useState<PlayerStats | null>(null);
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [playerFields, setPlayerFields] = useState<GradeField[]>([]);
 
   useEffect(() => {
     if (profile) {
-      const role = getPlayerRole(profile.name);
-      const fields = role ? getFieldsForRole(role) : [];
-      setPlayerFields(fields);
-      fetchStats(fields);
+      fetchStats();
     }
   }, [profile]);
 
-  const fetchStats = async (fields: GradeField[]) => {
+  const fetchStats = async () => {
     if (!profile) return;
 
     try {
+      // Get all grade sheets
       const { data: sheets, error: sheetsError } = await supabase
         .from('grade_sheets')
-        .select('id');
+        .select('id, sheet_date')
+        .order('sheet_date', { ascending: true });
 
       if (sheetsError) throw sheetsError;
 
       const totalGames = sheets?.length || 0;
 
+      // Get player's grades
       const { data: grades, error: gradesError } = await supabase
         .from('player_grades')
-        .select('*')
+        .select('grade_sheet_id, voto_generale')
         .eq('player_name', profile.name);
 
       if (gradesError) throw gradesError;
@@ -56,27 +62,34 @@ const PlayerDashboard = () => {
       const presenze = grades?.length || 0;
       const assenze = totalGames - presenze;
 
-      const calcAverage = (values: (number | null)[]) => {
-        const valid = values.filter((v): v is number => v !== null);
-        return valid.length > 0 ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
-      };
+      // Calculate overall average
+      const validGrades = grades?.map(g => g.voto_generale).filter((v): v is number => v !== null) || [];
+      const mediaGenerale = validGrades.length > 0
+        ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length
+        : null;
 
-      const fieldAverages: Record<string, number | null> = {};
-      fields.forEach(field => {
-        fieldAverages[field] = calcAverage(
-          grades?.map(g => g[field as keyof typeof g] as number | null) || []
-        );
-      });
+      // Build chart data - match grades to sheets by date order
+      const chartPoints: ChartDataPoint[] = [];
+      if (sheets && grades) {
+        for (const sheet of sheets) {
+          const playerGrade = grades.find(g => g.grade_sheet_id === sheet.id);
+          if (playerGrade && playerGrade.voto_generale !== null) {
+            chartPoints.push({
+              date: sheet.sheet_date,
+              displayDate: format(new Date(sheet.sheet_date), 'd MMM', { locale: it }),
+              average: playerGrade.voto_generale,
+            });
+          }
+        }
+      }
 
-      const playerStats: PlayerStats = {
+      setStats({
         presenze,
         assenze,
         totalGames,
-        fieldAverages,
-        mediaGenerale: calcAverage(grades?.map(g => g.voto_generale) || []),
-      };
-
-      setStats(playerStats);
+        mediaGenerale,
+      });
+      setChartData(chartPoints);
     } catch (error) {
       devLog.error('Error fetching stats:', error);
     } finally {
@@ -132,34 +145,21 @@ const PlayerDashboard = () => {
           </Card>
         </div>
 
-        <div className="space-y-3">
-          {playerFields.map(field => (
-            <Card key={field} className="bg-card border-border">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-foreground">Media {FIELD_LABELS[field]}</span>
-                  <span className="text-xl font-bold text-primary">
-                    {stats?.fieldAverages[field]?.toFixed(2) ?? '-'}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-
-          <Card className="bg-card border-primary/50 border-2">
-            <CardContent className="p-4">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-primary" />
-                  <span className="text-foreground font-semibold">Media Voti Generali</span>
-                </div>
-                <span className="text-2xl font-bold text-primary">
-                  {stats?.mediaGenerale?.toFixed(2) ?? '-'}
-                </span>
+        <Card className="bg-card border-primary/50 border-2">
+          <CardContent className="p-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-primary" />
+                <span className="text-foreground font-semibold">Media Voti Generali</span>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+              <span className="text-2xl font-bold text-primary">
+                {stats?.mediaGenerale?.toFixed(2) ?? '-'}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <PlayerPerformanceChart data={chartData} title="Il Mio Andamento" />
       </div>
     </div>
   );
