@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, TrendingUp, Calendar, CalendarX } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Calendar, CalendarX, Trophy } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { devLog } from '@/lib/devLog';
@@ -16,6 +16,7 @@ interface PlayerStats {
   assenze: number;
   totalGames: number;
   mediaGenerale: number | null;
+  mvpCount: number;
 }
 
 interface ChartDataPoint {
@@ -54,7 +55,7 @@ const PlayerDashboard = () => {
       // Get player's grades
       const { data: grades, error: gradesError } = await supabase
         .from('player_grades')
-        .select('grade_sheet_id, voto_generale')
+        .select('grade_sheet_id, voto_generale, is_mvp')
         .eq('player_name', profile.name);
 
       if (gradesError) throw gradesError;
@@ -67,6 +68,9 @@ const PlayerDashboard = () => {
       const mediaGenerale = validGrades.length > 0
         ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length
         : null;
+
+      // Count MVP awards
+      const mvpCount = grades?.filter(g => g.is_mvp).length || 0;
 
       // Build chart data - match grades to sheets by date order
       const chartPoints: ChartDataPoint[] = [];
@@ -88,6 +92,7 @@ const PlayerDashboard = () => {
         assenze,
         totalGames,
         mediaGenerale,
+        mvpCount,
       });
       setChartData(chartPoints);
     } catch (error) {
@@ -144,6 +149,22 @@ const PlayerDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {stats && stats.mvpCount > 0 && (
+          <Card className="bg-card border-yellow-500/50 border-2">
+            <CardContent className="p-4">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-yellow-500" />
+                  <span className="text-foreground font-semibold">Premi MVP</span>
+                </div>
+                <span className="text-2xl font-bold text-yellow-500">
+                  {stats.mvpCount}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="bg-card border-primary/50 border-2">
           <CardContent className="p-4">

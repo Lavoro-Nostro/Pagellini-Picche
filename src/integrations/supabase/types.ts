@@ -17,8 +17,12 @@ export type Database = {
       grade_sheets: {
         Row: {
           created_at: string
+          gym_location: string | null
           id: string
+          match_result: string | null
           note: string | null
+          set_scores: Json | null
+          sheet_category: string
           sheet_date: string
           sheet_type: string
           team_id: string
@@ -26,8 +30,12 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          gym_location?: string | null
           id?: string
+          match_result?: string | null
           note?: string | null
+          set_scores?: Json | null
+          sheet_category?: string
           sheet_date: string
           sheet_type?: string
           team_id: string
@@ -35,8 +43,12 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          gym_location?: string | null
           id?: string
+          match_result?: string | null
           note?: string | null
+          set_scores?: Json | null
+          sheet_category?: string
           sheet_date?: string
           sheet_type?: string
           team_id?: string
@@ -105,6 +117,39 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          related_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          related_id?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          related_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       player_grades: {
         Row: {
           alzate: number | null
@@ -117,6 +162,7 @@ export type Database = {
           difesa: number | null
           grade_sheet_id: string
           id: string
+          is_mvp: boolean
           muri: number | null
           player_name: string
           player_role: string | null
@@ -135,6 +181,7 @@ export type Database = {
           difesa?: number | null
           grade_sheet_id: string
           id?: string
+          is_mvp?: boolean
           muri?: number | null
           player_name: string
           player_role?: string | null
@@ -153,6 +200,7 @@ export type Database = {
           difesa?: number | null
           grade_sheet_id?: string
           id?: string
+          is_mvp?: boolean
           muri?: number | null
           player_name?: string
           player_role?: string | null

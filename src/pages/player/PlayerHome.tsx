@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { FileText, BarChart3, LogOut, CalendarDays, History, TrendingUp } from 'lucide-react';
 import logo from '@/assets/logo.jpg';
 import NextMatchCard from '@/components/NextMatchCard';
+import NotificationBell from '@/components/NotificationBell';
 import { useNextMatch } from '@/hooks/useNextMatch';
 import { usePlayerTeam } from '@/hooks/usePlayerTeam';
 
@@ -21,6 +22,9 @@ const PlayerHome = () => {
   return (
     <div className="min-h-screen gradient-dark p-6">
       <div className="max-w-md mx-auto space-y-8">
+        <div className="flex justify-end">
+          <NotificationBell />
+        </div>
         <div className="text-center space-y-4 pt-8">
           <img 
             src={logo} 
