@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, History, BarChart3, LogOut, Settings, Users } from 'lucide-react';
+import { Plus, History, BarChart3, LogOut, Settings, Users, Trophy } from 'lucide-react';
 import logo from '@/assets/logo.jpg';
 import NextMatchCard from '@/components/NextMatchCard';
 import { useNextMatch } from '@/hooks/useNextMatch';
@@ -54,6 +54,15 @@ const ModeratorHome = () => {
           >
             <BarChart3 className="w-5 h-5" />
             Vedi Medie Giocatori
+          </Button>
+
+          <Button
+            onClick={() => navigate('/moderator/mvp')}
+            variant="outline"
+            className="w-full h-14 border-yellow-500/50 text-foreground font-semibold text-lg gap-3 hover:bg-yellow-500/10"
+          >
+            <Trophy className="w-5 h-5 text-yellow-500" />
+            Classifica MVP
           </Button>
         </div>
 

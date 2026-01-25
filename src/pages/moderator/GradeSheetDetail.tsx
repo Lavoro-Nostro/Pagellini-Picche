@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Edit, Trash2, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Save, Loader2, Trophy, Dumbbell, Swords, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -21,12 +22,22 @@ interface PlayerGrade {
   player_role: string | null;
   voto_generale: number | null;
   commento: string | null;
+  is_mvp: boolean;
+}
+
+interface SetScore {
+  home: number;
+  away: number;
 }
 
 interface GradeSheet {
   id: string;
   sheet_date: string;
   note: string | null;
+  sheet_category: string;
+  gym_location: string | null;
+  match_result: string | null;
+  set_scores: SetScore[] | null;
 }
 
 const GradeSheetDetail = () => {
@@ -41,6 +52,7 @@ const GradeSheetDetail = () => {
   const [editGrades, setEditGrades] = useState<Record<string, number | null>>({});
   const [editComments, setEditComments] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedMvp, setSelectedMvp] = useState<string | null>(null);
   const gradeSheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,23 +63,36 @@ const GradeSheetDetail = () => {
     try {
       const { data: sheetData, error: sheetError } = await supabase
         .from('grade_sheets')
-        .select('id, sheet_date, note')
+        .select('id, sheet_date, note, sheet_category, gym_location, match_result, set_scores')
         .eq('id', id)
         .single();
 
       if (sheetError) throw sheetError;
-      setSheet(sheetData);
+      
+      // Parse set_scores if it's a string
+      const parsedSheet = {
+        ...sheetData,
+        set_scores: typeof sheetData.set_scores === 'string' 
+          ? JSON.parse(sheetData.set_scores) 
+          : sheetData.set_scores,
+      };
+      
+      setSheet(parsedSheet);
       setEditNote(sheetData.note || '');
       setEditDate(sheetData.sheet_date);
 
       const { data: gradesData, error: gradesError } = await supabase
         .from('player_grades')
-        .select('id, player_name, player_role, voto_generale, commento')
+        .select('id, player_name, player_role, voto_generale, commento, is_mvp')
         .eq('grade_sheet_id', id)
         .order('player_name');
 
       if (gradesError) throw gradesError;
       setGrades(gradesData || []);
+
+      // Find current MVP
+      const currentMvp = (gradesData || []).find(g => g.is_mvp);
+      setSelectedMvp(currentMvp?.id || null);
 
       // Initialize edit grades and comments
       const initialEditGrades: Record<string, number | null> = {};
@@ -88,6 +113,43 @@ const GradeSheetDetail = () => {
 
   const setGrade = (player: string, value: number | null) => {
     setEditGrades(prev => ({ ...prev, [player]: value }));
+  };
+
+  const handleMvpVote = async (gradeId: string) => {
+    try {
+      // First, remove MVP from all players in this sheet
+      const { error: clearError } = await supabase
+        .from('player_grades')
+        .update({ is_mvp: false })
+        .eq('grade_sheet_id', id);
+
+      if (clearError) throw clearError;
+
+      // If clicking the same player, just clear (toggle off)
+      if (selectedMvp === gradeId) {
+        setSelectedMvp(null);
+        setGrades(prev => prev.map(g => ({ ...g, is_mvp: false })));
+        toast.success('MVP rimosso');
+        return;
+      }
+
+      // Set new MVP
+      const { error: setError } = await supabase
+        .from('player_grades')
+        .update({ is_mvp: true })
+        .eq('id', gradeId);
+
+      if (setError) throw setError;
+
+      setSelectedMvp(gradeId);
+      setGrades(prev => prev.map(g => ({ ...g, is_mvp: g.id === gradeId })));
+      
+      const mvpPlayer = grades.find(g => g.id === gradeId);
+      toast.success(`${mvpPlayer?.player_name} votato MVP!`);
+    } catch (error) {
+      devLog.error('Error setting MVP:', error);
+      toast.error('Errore nel votare MVP');
+    }
   };
 
   const handleSave = async () => {
@@ -201,6 +263,8 @@ const GradeSheetDetail = () => {
     );
   }
 
+  const isMatch = sheet.sheet_category === 'partita';
+
   return (
     <div className="min-h-screen gradient-dark p-4">
       <div className="max-w-2xl mx-auto space-y-6" id="grade-sheet-detail-content" ref={gradeSheetRef}>
@@ -213,10 +277,51 @@ const GradeSheetDetail = () => {
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-xl font-bold text-foreground flex-1">
-            Pagellino del {format(new Date(sheet.sheet_date), 'd MMMM yyyy', { locale: it })}
-          </h1>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              {isMatch ? (
+                <Swords className="w-5 h-5 text-primary" />
+              ) : (
+                <Dumbbell className="w-5 h-5 text-secondary" />
+              )}
+              <h1 className="text-xl font-bold text-foreground">
+                {isMatch ? 'Partita' : 'Allenamento'} del {format(new Date(sheet.sheet_date), 'd MMMM yyyy', { locale: it })}
+              </h1>
+            </div>
+          </div>
         </div>
+
+        {/* Match/Training Info Card */}
+        {(sheet.gym_location || sheet.match_result || sheet.set_scores) && (
+          <Card className="bg-card border-primary/30">
+            <CardContent className="p-4 space-y-3">
+              {sheet.gym_location && (
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-foreground">{sheet.gym_location}</span>
+                </div>
+              )}
+              {sheet.match_result && (
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground mb-1">Risultato Finale</p>
+                  <p className="text-3xl font-bold text-primary">{sheet.match_result}</p>
+                </div>
+              )}
+              {sheet.set_scores && sheet.set_scores.length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Parziali</p>
+                  <div className="flex flex-wrap gap-2">
+                    {sheet.set_scores.map((set, index) => (
+                      <Badge key={index} variant="outline" className="text-foreground">
+                        Set {index + 1}: {set.home}-{set.away}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <div className="flex gap-2">
           <Button
@@ -288,15 +393,53 @@ const GradeSheetDetail = () => {
           </Card>
         )}
 
+        {/* MVP Voting Section - Only for matches */}
+        {isMatch && !isEditing && (
+          <Card className="bg-card border-yellow-500/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-yellow-500" />
+                Vota MVP
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {grades.map(grade => (
+                  <Button
+                    key={grade.id}
+                    variant={selectedMvp === grade.id ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleMvpVote(grade.id)}
+                    className={selectedMvp === grade.id 
+                      ? 'bg-yellow-500 text-black hover:bg-yellow-600' 
+                      : 'border-border text-foreground hover:bg-muted'
+                    }
+                  >
+                    {grade.player_name}
+                    {selectedMvp === grade.id && <Trophy className="w-4 h-4 ml-1" />}
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="space-y-3">
           {grades.map(grade => {
             const role = (grade.player_role as PlayerRole) || PLAYER_ROLE_MAP[grade.player_name];
 
             return (
-              <Card key={grade.id} className="bg-card border-border">
+              <Card key={grade.id} className={`bg-card border-border ${grade.is_mvp ? 'border-yellow-500/50 border-2' : ''}`}>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-foreground">
-                    {grade.player_name} <span className="text-muted-foreground font-normal">({role ? ROLE_DISPLAY_NAMES[role] : 'N/A'})</span>
+                  <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                    {grade.player_name} 
+                    <span className="text-muted-foreground font-normal">({role ? ROLE_DISPLAY_NAMES[role] : 'N/A'})</span>
+                    {grade.is_mvp && (
+                      <Badge className="bg-yellow-500 text-black ml-auto">
+                        <Trophy className="w-3 h-3 mr-1" />
+                        MVP
+                      </Badge>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>

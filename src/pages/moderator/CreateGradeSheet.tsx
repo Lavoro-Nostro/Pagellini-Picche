@@ -4,6 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
@@ -32,7 +41,13 @@ interface PlayerComments {
   [key: string]: string;
 }
 
+interface SetScore {
+  home: string;
+  away: string;
+}
+
 const DEFAULT_ROLE: PlayerRole = 'martello';
+const GYM_OPTIONS = ['Spurinna', 'Don Rua', 'Argan'] as const;
 
 const CreateGradeSheet = () => {
   const navigate = useNavigate();
@@ -40,6 +55,14 @@ const CreateGradeSheet = () => {
   const { teamId } = useModeratorTeam();
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [note, setNote] = useState('');
+  const [sheetCategory, setSheetCategory] = useState<'allenamento' | 'partita'>('allenamento');
+  const [gymLocation, setGymLocation] = useState<string>('');
+  const [matchResult, setMatchResult] = useState({ home: '', away: '' });
+  const [setScores, setSetScores] = useState<SetScore[]>([
+    { home: '', away: '' },
+    { home: '', away: '' },
+    { home: '', away: '' },
+  ]);
   const [players, setPlayers] = useState<TeamPlayer[]>([]);
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
   const [grades, setGrades] = useState<Record<string, PlayerGrade>>({});
@@ -142,6 +165,18 @@ const CreateGradeSheet = () => {
         return;
       }
 
+      // Prepare set scores as JSON if it's a match
+      const setScoresJson = sheetCategory === 'partita' 
+        ? setScores.filter(s => s.home || s.away).map(s => ({
+            home: parseInt(s.home) || 0,
+            away: parseInt(s.away) || 0,
+          }))
+        : null;
+
+      const matchResultStr = sheetCategory === 'partita' && matchResult.home && matchResult.away
+        ? `${matchResult.home}-${matchResult.away}`
+        : null;
+
       const { data: sheetData, error: sheetError } = await supabase
         .from('grade_sheets')
         .insert({
@@ -149,6 +184,10 @@ const CreateGradeSheet = () => {
           note: note.trim() || null,
           sheet_type: 'classica',
           team_id: teamId,
+          sheet_category: sheetCategory,
+          gym_location: sheetCategory === 'allenamento' ? gymLocation || null : null,
+          match_result: matchResultStr,
+          set_scores: setScoresJson,
         })
         .select()
         .single();
@@ -256,6 +295,120 @@ const CreateGradeSheet = () => {
         )}
 
         <div className="space-y-4">
+          <div>
+            <label className="text-sm text-muted-foreground mb-2 block">Tipo Pagellino</label>
+            <RadioGroup
+              value={sheetCategory}
+              onValueChange={(value) => setSheetCategory(value as 'allenamento' | 'partita')}
+              className="flex gap-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="allenamento" id="allenamento" />
+                <Label htmlFor="allenamento" className="text-foreground cursor-pointer">Allenamento</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="partita" id="partita" />
+                <Label htmlFor="partita" className="text-foreground cursor-pointer">Partita</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {sheetCategory === 'allenamento' && (
+            <div>
+              <label className="text-sm text-muted-foreground mb-2 block">Palestra</label>
+              <Select value={gymLocation} onValueChange={setGymLocation}>
+                <SelectTrigger className="bg-muted border-border text-foreground">
+                  <SelectValue placeholder="Seleziona palestra..." />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  {GYM_OPTIONS.map(gym => (
+                    <SelectItem key={gym} value={gym} className="text-foreground">
+                      {gym}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {sheetCategory === 'partita' && (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Risultato Finale</label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="3"
+                    value={matchResult.home}
+                    onChange={(e) => setMatchResult(prev => ({ ...prev, home: e.target.value }))}
+                    placeholder="Noi"
+                    className="w-20 bg-muted border-border text-foreground text-center"
+                  />
+                  <span className="text-foreground font-bold">-</span>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="3"
+                    value={matchResult.away}
+                    onChange={(e) => setMatchResult(prev => ({ ...prev, away: e.target.value }))}
+                    placeholder="Loro"
+                    className="w-20 bg-muted border-border text-foreground text-center"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Parziali Set</label>
+                <div className="space-y-2">
+                  {setScores.map((set, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground w-16">Set {index + 1}:</span>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="30"
+                        value={set.home}
+                        onChange={(e) => {
+                          const newScores = [...setScores];
+                          newScores[index] = { ...newScores[index], home: e.target.value };
+                          setSetScores(newScores);
+                        }}
+                        placeholder="Noi"
+                        className="w-16 bg-muted border-border text-foreground text-center"
+                      />
+                      <span className="text-foreground">-</span>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="30"
+                        value={set.away}
+                        onChange={(e) => {
+                          const newScores = [...setScores];
+                          newScores[index] = { ...newScores[index], away: e.target.value };
+                          setSetScores(newScores);
+                        }}
+                        placeholder="Loro"
+                        className="w-16 bg-muted border-border text-foreground text-center"
+                      />
+                    </div>
+                  ))}
+                  {setScores.length < 5 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSetScores([...setScores, { home: '', away: '' }])}
+                      className="text-sm"
+                    >
+                      + Aggiungi Set
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="text-sm text-muted-foreground mb-2 block">Data</label>
             <Input
