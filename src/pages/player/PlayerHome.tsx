@@ -7,12 +7,18 @@ import NextMatchCard from '@/components/NextMatchCard';
 import NotificationBell from '@/components/NotificationBell';
 import { useNextMatch } from '@/hooks/useNextMatch';
 import { usePlayerTeam } from '@/hooks/usePlayerTeam';
+import { usePlayerSettings } from '@/hooks/usePlayerSettings';
+import { useOneSignal } from '@/hooks/useOnesignal';
 
 const PlayerHome = () => {
   const navigate = useNavigate();
   const { profile, logout } = useAuth();
   const { nextMatch, isLoading } = useNextMatch();
   const { teamName } = usePlayerTeam();
+  const { onesignalAppId } = usePlayerSettings();
+  
+  // Initialize OneSignal for push notifications
+  useOneSignal(onesignalAppId);
 
   const handleLogout = async () => {
     await logout();

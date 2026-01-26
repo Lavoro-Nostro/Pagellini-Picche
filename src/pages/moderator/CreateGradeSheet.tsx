@@ -26,6 +26,7 @@ import {
 import { downloadGradeSheetAsPng } from '@/lib/gradeSheetImage';
 import { useModeratorTeam } from '@/hooks/useModeratorTeam';
 import { useAuth } from '@/contexts/AuthContext';
+import { sendPushNotification } from '@/hooks/useOnesignal';
 
 interface TeamPlayer {
   id: string;
@@ -227,6 +228,14 @@ const CreateGradeSheet = () => {
       }
 
       toast.success('Pagellino salvato! Generazione immagine...');
+
+      // Send push notification
+      const categoryDisplay = sheetCategory === 'partita' ? 'Partita' : 'Allenamento';
+      await sendPushNotification(
+        teamId,
+        'Nuovo Pagellino Pubblicato',
+        `È stato pubblicato un nuovo pagellino (${categoryDisplay}) del ${format(new Date(date), 'dd/MM/yyyy')}`
+      );
       
       // Prepare grades data for image generation
       const gradesForImage = playerGradesData.map(pg => ({

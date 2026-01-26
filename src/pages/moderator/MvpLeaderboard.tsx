@@ -7,6 +7,11 @@ import { useModeratorTeam } from '@/hooks/useModeratorTeam';
 import { ArrowLeft, Trophy, Medal } from 'lucide-react';
 import { devLog } from '@/lib/devLog';
 
+interface MvpVote {
+  voted_player_name: string;
+  grade_sheet_id: string;
+}
+
 interface MvpCount {
   player_name: string;
   mvp_count: number;
@@ -43,23 +48,42 @@ const MvpLeaderboard = () => {
 
       const sheetIds = sheets.map(s => s.id);
 
-      // Get MVP grades
-      const { data: mvpGrades, error: gradesError } = await supabase
-        .from('player_grades')
-        .select('player_name')
-        .in('grade_sheet_id', sheetIds)
-        .eq('is_mvp', true);
+      // Get all MVP votes for these sheets
+      const { data: votes, error: votesError } = await supabase
+        .from('mvp_votes')
+        .select('voted_player_name, grade_sheet_id')
+        .in('grade_sheet_id', sheetIds);
 
-      if (gradesError) throw gradesError;
+      if (votesError) throw votesError;
 
-      // Count MVPs per player
-      const countMap: Record<string, number> = {};
-      (mvpGrades || []).forEach(grade => {
-        countMap[grade.player_name] = (countMap[grade.player_name] || 0) + 1;
+      const typedVotes = (votes || []) as unknown as MvpVote[];
+
+      // Group votes by grade_sheet_id and find winner(s) for each sheet
+      const sheetVotes: Record<string, Record<string, number>> = {};
+      typedVotes.forEach(vote => {
+        if (!sheetVotes[vote.grade_sheet_id]) {
+          sheetVotes[vote.grade_sheet_id] = {};
+        }
+        sheetVotes[vote.grade_sheet_id][vote.voted_player_name] = 
+          (sheetVotes[vote.grade_sheet_id][vote.voted_player_name] || 0) + 1;
+      });
+
+      // Count MVP wins per player (player with most votes per sheet wins)
+      const mvpWins: Record<string, number> = {};
+      Object.values(sheetVotes).forEach(playerVotes => {
+        const maxVotes = Math.max(...Object.values(playerVotes));
+        if (maxVotes > 0) {
+          // Find all players with max votes (handles ties)
+          Object.entries(playerVotes)
+            .filter(([, count]) => count === maxVotes)
+            .forEach(([playerName]) => {
+              mvpWins[playerName] = (mvpWins[playerName] || 0) + 1;
+            });
+        }
       });
 
       // Convert to array and sort
-      const counts: MvpCount[] = Object.entries(countMap)
+      const counts: MvpCount[] = Object.entries(mvpWins)
         .map(([player_name, mvp_count]) => ({ player_name, mvp_count }))
         .sort((a, b) => b.mvp_count - a.mvp_count);
 
@@ -107,7 +131,7 @@ const MvpLeaderboard = () => {
               <Trophy className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">Nessun MVP votato ancora</p>
               <p className="text-sm text-muted-foreground mt-2">
-                Puoi votare l'MVP di una partita dalla pagina di dettaglio del pagellino
+                I giocatori possono votare l'MVP di una partita dalla pagina di dettaglio del pagellino
               </p>
             </CardContent>
           </Card>

@@ -117,6 +117,73 @@ export type Database = {
           },
         ]
       }
+      moderator_settings: {
+        Row: {
+          created_at: string
+          id: string
+          onesignal_app_id: string | null
+          onesignal_rest_api_key: string | null
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          onesignal_app_id?: string | null
+          onesignal_rest_api_key?: string | null
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          onesignal_app_id?: string | null
+          onesignal_rest_api_key?: string | null
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moderator_settings_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: true
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mvp_votes: {
+        Row: {
+          created_at: string
+          grade_sheet_id: string
+          id: string
+          voted_player_name: string
+          voter_id: string
+        }
+        Insert: {
+          created_at?: string
+          grade_sheet_id: string
+          id?: string
+          voted_player_name: string
+          voter_id: string
+        }
+        Update: {
+          created_at?: string
+          grade_sheet_id?: string
+          id?: string
+          voted_player_name?: string
+          voter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mvp_votes_grade_sheet_id_fkey"
+            columns: ["grade_sheet_id"]
+            isOneToOne: false
+            referencedRelation: "grade_sheets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
