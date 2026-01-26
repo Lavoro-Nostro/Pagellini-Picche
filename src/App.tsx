@@ -14,6 +14,7 @@ import PlayerAverages from "./pages/moderator/PlayerAverages";
 import ManageMatches from "./pages/moderator/ManageMatches";
 import ManagePlayers from "./pages/moderator/ManagePlayers";
 import MvpLeaderboard from "./pages/moderator/MvpLeaderboard";
+import ModeratorSettings from "./pages/moderator/Settings";
 import PlayerHome from "./pages/player/PlayerHome";
 import LatestGradeSheet from "./pages/player/LatestGradeSheet";
 import PlayerDashboard from "./pages/player/PlayerDashboard";
@@ -74,6 +75,7 @@ const AppRoutes = () => {
       <Route path="/moderator/matches" element={<ProtectedRoute role="moderator"><ManageMatches /></ProtectedRoute>} />
       <Route path="/moderator/players" element={<ProtectedRoute role="moderator"><ManagePlayers /></ProtectedRoute>} />
       <Route path="/moderator/mvp" element={<ProtectedRoute role="moderator"><MvpLeaderboard /></ProtectedRoute>} />
+      <Route path="/moderator/settings" element={<ProtectedRoute role="moderator"><ModeratorSettings /></ProtectedRoute>} />
       
       {/* Player Routes */}
       <Route path="/player" element={<ProtectedRoute role="player"><PlayerHome /></ProtectedRoute>} />

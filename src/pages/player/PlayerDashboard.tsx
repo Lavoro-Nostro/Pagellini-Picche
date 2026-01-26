@@ -55,7 +55,7 @@ const PlayerDashboard = () => {
       // Get player's grades
       const { data: grades, error: gradesError } = await supabase
         .from('player_grades')
-        .select('grade_sheet_id, voto_generale, is_mvp')
+        .select('grade_sheet_id, voto_generale')
         .eq('player_name', profile.name);
 
       if (gradesError) throw gradesError;
@@ -69,10 +69,37 @@ const PlayerDashboard = () => {
         ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length
         : null;
 
-      // Count MVP awards
-      const mvpCount = grades?.filter(g => g.is_mvp).length || 0;
+      // Count MVP wins from mvp_votes table
+      const matchSheetIds = sheets?.filter(s => s).map(s => s.id) || [];
+      let mvpCount = 0;
+      
+      if (matchSheetIds.length > 0) {
+        const { data: allVotes, error: votesError } = await supabase
+          .from('mvp_votes')
+          .select('voted_player_name, grade_sheet_id')
+          .in('grade_sheet_id', matchSheetIds);
 
-      // Build chart data - match grades to sheets by date order
+        if (!votesError && allVotes) {
+          // Group by sheet and find winners
+          const sheetVotes: Record<string, Record<string, number>> = {};
+          (allVotes as { voted_player_name: string; grade_sheet_id: string }[]).forEach(vote => {
+            if (!sheetVotes[vote.grade_sheet_id]) {
+              sheetVotes[vote.grade_sheet_id] = {};
+            }
+            sheetVotes[vote.grade_sheet_id][vote.voted_player_name] = 
+              (sheetVotes[vote.grade_sheet_id][vote.voted_player_name] || 0) + 1;
+          });
+
+          Object.values(sheetVotes).forEach(playerVotes => {
+            const maxVotes = Math.max(...Object.values(playerVotes));
+            if (maxVotes > 0 && playerVotes[profile.name] === maxVotes) {
+              mvpCount++;
+            }
+          });
+        }
+      }
+
+      // Build chart data
       const chartPoints: ChartDataPoint[] = [];
       if (sheets && grades) {
         for (const sheet of sheets) {

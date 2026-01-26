@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Dumbbell, Swords, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { devLog } from '@/lib/devLog';
 import { PLAYER_ROLE_MAP, ROLE_DISPLAY_NAMES, type PlayerRole } from '@/lib/playerRoles';
+import MvpVoting from '@/components/MvpVoting';
 
 interface PlayerGrade {
   id: string;
@@ -18,10 +20,19 @@ interface PlayerGrade {
   commento: string | null;
 }
 
+interface SetScore {
+  home: number;
+  away: number;
+}
+
 interface GradeSheet {
   id: string;
   sheet_date: string;
   note: string | null;
+  sheet_category: string;
+  gym_location: string | null;
+  match_result: string | null;
+  set_scores: SetScore[] | null;
 }
 
 const GradeSheetDetail = () => {
@@ -40,12 +51,21 @@ const GradeSheetDetail = () => {
     try {
       const { data: sheetData, error: sheetError } = await supabase
         .from('grade_sheets')
-        .select('*')
+        .select('id, sheet_date, note, sheet_category, gym_location, match_result, set_scores')
         .eq('id', id)
         .single();
 
       if (sheetError) throw sheetError;
-      setSheet(sheetData);
+      
+      // Parse set_scores if it's a string
+      const parsedSheet = {
+        ...sheetData,
+        set_scores: typeof sheetData.set_scores === 'string' 
+          ? JSON.parse(sheetData.set_scores) 
+          : sheetData.set_scores,
+      };
+      
+      setSheet(parsedSheet);
 
       const { data: gradesData, error: gradesError } = await supabase
         .from('player_grades')
@@ -78,6 +98,8 @@ const GradeSheetDetail = () => {
     );
   }
 
+  const isMatch = sheet.sheet_category === 'partita';
+
   return (
     <div className="min-h-screen gradient-dark p-4">
       <div className="max-w-2xl mx-auto space-y-6">
@@ -90,10 +112,56 @@ const GradeSheetDetail = () => {
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-xl font-bold text-foreground">
-            Pagellino del {format(new Date(sheet.sheet_date), 'd MMMM yyyy', { locale: it })}
-          </h1>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              {isMatch ? (
+                <Swords className="w-5 h-5 text-primary" />
+              ) : (
+                <Dumbbell className="w-5 h-5 text-secondary" />
+              )}
+              <h1 className="text-xl font-bold text-foreground">
+                {isMatch ? 'Partita' : 'Allenamento'} del {format(new Date(sheet.sheet_date), 'd MMMM yyyy', { locale: it })}
+              </h1>
+            </div>
+          </div>
         </div>
+
+        {/* Match/Training Info Card */}
+        {(sheet.gym_location || sheet.match_result || sheet.set_scores) && (
+          <Card className="bg-card border-primary/30">
+            <CardContent className="p-4 space-y-3">
+              {sheet.gym_location && (
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-foreground">{sheet.gym_location}</span>
+                </div>
+              )}
+              {sheet.match_result && (
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground mb-1">Risultato Finale</p>
+                  <p className="text-3xl font-bold text-primary">{sheet.match_result}</p>
+                </div>
+              )}
+              {sheet.set_scores && sheet.set_scores.length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Parziali</p>
+                  <div className="flex flex-wrap gap-2">
+                    {sheet.set_scores.map((set, index) => (
+                      <Badge key={index} variant="outline" className="text-foreground">
+                        Set {index + 1}: {set.home}-{set.away}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* MVP Voting Section - Only for matches */}
+        {isMatch && (
+          <MvpVoting gradeSheetId={sheet.id} grades={grades} />
+        )}
 
         {sheet.note && (
           <Card className="bg-card border-border">

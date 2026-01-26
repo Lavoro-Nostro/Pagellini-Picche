@@ -393,33 +393,19 @@ const GradeSheetDetail = () => {
           </Card>
         )}
 
-        {/* MVP Voting Section - Only for matches */}
+        {/* MVP Info Section - Only for matches (voting moved to players) */}
         {isMatch && !isEditing && (
           <Card className="bg-card border-yellow-500/30">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg text-foreground flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-yellow-500" />
-                Vota MVP
+                MVP
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {grades.map(grade => (
-                  <Button
-                    key={grade.id}
-                    variant={selectedMvp === grade.id ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => handleMvpVote(grade.id)}
-                    className={selectedMvp === grade.id 
-                      ? 'bg-yellow-500 text-black hover:bg-yellow-600' 
-                      : 'border-border text-foreground hover:bg-muted'
-                    }
-                  >
-                    {grade.player_name}
-                    {selectedMvp === grade.id && <Trophy className="w-4 h-4 ml-1" />}
-                  </Button>
-                ))}
-              </div>
+              <p className="text-sm text-muted-foreground">
+                Il voto MVP è ora gestito dai giocatori. Ogni giocatore può votare 1 volta.
+              </p>
             </CardContent>
           </Card>
         )}
