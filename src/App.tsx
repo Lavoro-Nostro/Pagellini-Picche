@@ -14,6 +14,7 @@ import PlayerAverages from "./pages/moderator/PlayerAverages";
 import ManageMatches from "./pages/moderator/ManageMatches";
 import ManagePlayers from "./pages/moderator/ManagePlayers";
 import MvpLeaderboard from "./pages/moderator/MvpLeaderboard";
+import ManageEvents from "./pages/moderator/ManageEvents";
 import ModeratorSettings from "./pages/moderator/Settings";
 import PlayerHome from "./pages/player/PlayerHome";
 import LatestGradeSheet from "./pages/player/LatestGradeSheet";
@@ -22,6 +23,7 @@ import MatchesList from "./pages/player/MatchesList";
 import PlayerGradeSheetHistory from "./pages/player/GradeSheetHistory";
 import PlayerGradeSheetDetail from "./pages/player/GradeSheetDetail";
 import TeamPerformance from "./pages/player/TeamPerformance";
+import EventsList from "./pages/player/EventsList";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -76,6 +78,7 @@ const AppRoutes = () => {
       <Route path="/moderator/players" element={<ProtectedRoute role="moderator"><ManagePlayers /></ProtectedRoute>} />
       <Route path="/moderator/mvp" element={<ProtectedRoute role="moderator"><MvpLeaderboard /></ProtectedRoute>} />
       <Route path="/moderator/settings" element={<ProtectedRoute role="moderator"><ModeratorSettings /></ProtectedRoute>} />
+      <Route path="/moderator/events" element={<ProtectedRoute role="moderator"><ManageEvents /></ProtectedRoute>} />
       
       {/* Player Routes */}
       <Route path="/player" element={<ProtectedRoute role="player"><PlayerHome /></ProtectedRoute>} />
@@ -85,6 +88,7 @@ const AppRoutes = () => {
       <Route path="/player/dashboard" element={<ProtectedRoute role="player"><PlayerDashboard /></ProtectedRoute>} />
       <Route path="/player/team-performance" element={<ProtectedRoute role="player"><TeamPerformance /></ProtectedRoute>} />
       <Route path="/player/matches" element={<ProtectedRoute role="player"><MatchesList /></ProtectedRoute>} />
+      <Route path="/player/events" element={<ProtectedRoute role="player"><EventsList /></ProtectedRoute>} />
       
       <Route path="*" element={<NotFound />} />
     </Routes>

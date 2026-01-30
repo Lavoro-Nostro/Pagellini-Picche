@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, History, BarChart3, LogOut, Settings, Users, Trophy, Cog } from 'lucide-react';
+import { Plus, History, BarChart3, LogOut, Settings, Users, Trophy, Cog, ClipboardList } from 'lucide-react';
 import logo from '@/assets/logo.jpg';
 import NextMatchCard from '@/components/NextMatchCard';
 import { useNextMatch } from '@/hooks/useNextMatch';
@@ -86,6 +86,14 @@ const ModeratorHome = () => {
               Gestisci Giocatori
             </Button>
           </div>
+          <Button
+            onClick={() => navigate('/moderator/events')}
+            variant="outline"
+            className="w-full border-border/50 text-muted-foreground hover:text-foreground gap-2"
+          >
+            <ClipboardList className="w-4 h-4" />
+            Gestisci Sondaggi Presenze
+          </Button>
         </div>
 
         <div className="pt-4 space-y-2">

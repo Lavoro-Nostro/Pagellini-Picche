@@ -14,6 +14,91 @@ export type Database = {
   }
   public: {
     Tables: {
+      event_attendance: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_attendance_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          created_at: string
+          details: string | null
+          event_date: string
+          event_time: string
+          event_type: string
+          id: string
+          is_active: boolean
+          location_address: string | null
+          location_name: string | null
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          event_date: string
+          event_time: string
+          event_type: string
+          id?: string
+          is_active?: boolean
+          location_address?: string | null
+          location_name?: string | null
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          event_date?: string
+          event_time?: string
+          event_type?: string
+          id?: string
+          is_active?: boolean
+          location_address?: string | null
+          location_name?: string | null
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grade_sheets: {
         Row: {
           created_at: string
