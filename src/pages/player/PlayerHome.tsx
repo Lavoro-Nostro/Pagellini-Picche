@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { FileText, BarChart3, LogOut, CalendarDays, History, TrendingUp } from 'lucide-react';
+import { FileText, BarChart3, LogOut, CalendarDays, History, TrendingUp, ClipboardCheck } from 'lucide-react';
 import logo from '@/assets/logo.jpg';
 import NextMatchCard from '@/components/NextMatchCard';
 import NotificationBell from '@/components/NotificationBell';
@@ -90,6 +90,14 @@ const PlayerHome = () => {
           >
             <CalendarDays className="w-4 h-4" />
             Vedi Tutte le Partite
+          </Button>
+          <Button
+            onClick={() => navigate('/player/events')}
+            variant="outline"
+            className="w-full border-border/50 text-muted-foreground hover:text-foreground gap-2"
+          >
+            <ClipboardCheck className="w-4 h-4" />
+            Sondaggi Presenze
           </Button>
         </div>
 
