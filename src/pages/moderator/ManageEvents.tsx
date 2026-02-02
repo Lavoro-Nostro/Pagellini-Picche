@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Calendar, Clock, MapPin, Users, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Calendar, Clock, MapPin, Users, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,10 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useModeratorTeam } from "@/hooks/useModeratorTeam";
+import { sendPushNotification } from "@/hooks/useOnesignal";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
@@ -38,6 +40,12 @@ interface AttendanceRecord {
   profiles: { name: string } | null;
 }
 
+const PRESET_LOCATIONS = [
+  { name: 'SMS Gaio Cecilio', address: 'Via Vestricio Spurinna, 152' },
+  { name: 'Don Michele Rua', address: 'Via Giuseppe Belloni, 30' },
+  { name: 'Argan', address: 'Via Giuseppe Belloni, 32' },
+];
+
 const ManageEvents = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -49,8 +57,10 @@ const ManageEvents = () => {
   const [details, setDetails] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
+  const [selectedPreset, setSelectedPreset] = useState<string>('');
   const [locationName, setLocationName] = useState('');
   const [locationAddress, setLocationAddress] = useState('');
+  const [expandedEvents, setExpandedEvents] = useState<Record<string, boolean>>({});
 
   const { data: events, isLoading } = useQuery({
     queryKey: ['events', teamId],
@@ -89,7 +99,6 @@ const ManageEvents = () => {
       
       if (error) throw error;
       
-      // Group by event_id
       const grouped: Record<string, AttendanceRecord[]> = {};
       (data || []).forEach((att) => {
         const record = att as unknown as AttendanceRecord;
@@ -119,6 +128,15 @@ const ManageEvents = () => {
         });
       
       if (error) throw error;
+
+      // Send push notification
+      const eventTypeLabel = eventType === 'allenamento' ? 'Allenamento' : eventType === 'partita' ? 'Partita' : 'Evento';
+      const formattedDate = format(new Date(eventDate), 'd MMMM', { locale: it });
+      await sendPushNotification(
+        teamId,
+        'Nuovo Sondaggio Presenze',
+        `${eventTypeLabel} - ${formattedDate} alle ${eventTime.slice(0, 5)}`
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -162,8 +180,27 @@ const ManageEvents = () => {
     setDetails('');
     setEventDate('');
     setEventTime('');
+    setSelectedPreset('');
     setLocationName('');
     setLocationAddress('');
+  };
+
+  const handlePresetChange = (value: string) => {
+    setSelectedPreset(value);
+    if (value === 'custom') {
+      setLocationName('');
+      setLocationAddress('');
+    } else {
+      const preset = PRESET_LOCATIONS.find(p => p.name === value);
+      if (preset) {
+        setLocationName(preset.name);
+        setLocationAddress(preset.address);
+      }
+    }
+  };
+
+  const toggleExpanded = (eventId: string) => {
+    setExpandedEvents(prev => ({ ...prev, [eventId]: !prev[eventId] }));
   };
 
   const getEventTypeLabel = (type: EventType) => {
@@ -250,21 +287,49 @@ const ManageEvents = () => {
 
               <div className="space-y-2">
                 <Label>Struttura</Label>
-                <Input 
-                  placeholder="Nome struttura..."
-                  value={locationName}
-                  onChange={(e) => setLocationName(e.target.value)}
-                />
+                <Select value={selectedPreset} onValueChange={handlePresetChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona struttura..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRESET_LOCATIONS.map((loc) => (
+                      <SelectItem key={loc.name} value={loc.name}>
+                        {loc.name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="custom">Altra struttura...</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label>Indirizzo</Label>
-                <Input 
-                  placeholder="Via/Indirizzo..."
-                  value={locationAddress}
-                  onChange={(e) => setLocationAddress(e.target.value)}
-                />
-              </div>
+              {selectedPreset === 'custom' && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Nome Struttura</Label>
+                    <Input 
+                      placeholder="Nome struttura..."
+                      value={locationName}
+                      onChange={(e) => setLocationName(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Indirizzo</Label>
+                    <Input 
+                      placeholder="Via/Indirizzo..."
+                      value={locationAddress}
+                      onChange={(e) => setLocationAddress(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+
+              {selectedPreset && selectedPreset !== 'custom' && (
+                <div className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                  <MapPin className="h-4 w-4 inline mr-1" />
+                  {locationAddress}
+                </div>
+              )}
 
               <Button 
                 className="w-full" 
@@ -291,6 +356,7 @@ const ManageEvents = () => {
               const attendance = attendanceData?.[event.id] || [];
               const presenti = attendance.filter(a => a.status === 'presente');
               const assenti = attendance.filter(a => a.status === 'assente');
+              const isExpanded = expandedEvents[event.id];
               
               return (
                 <Card key={event.id}>
@@ -333,34 +399,43 @@ const ManageEvents = () => {
                       <p className="text-sm text-muted-foreground">{event.details}</p>
                     )}
                     
-                    <div className="flex items-center gap-4 pt-2 border-t border-border">
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-green-500" />
-                        <span className="text-sm font-medium text-green-500">
-                          {presenti.length} Presenti
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-red-500" />
-                        <span className="text-sm font-medium text-red-500">
-                          {assenti.length} Assenti
-                        </span>
-                      </div>
-                    </div>
-                    
-                    {presenti.length > 0 && (
-                      <div className="text-xs text-muted-foreground">
-                        <span className="font-medium">Presenti: </span>
-                        {presenti.map(p => p.profiles?.name).filter(Boolean).join(', ')}
-                      </div>
-                    )}
-                    
-                    {assenti.length > 0 && (
-                      <div className="text-xs text-muted-foreground">
-                        <span className="font-medium">Assenti: </span>
-                        {assenti.map(p => p.profiles?.name).filter(Boolean).join(', ')}
-                      </div>
-                    )}
+                    {/* Attendance Summary with Collapsible */}
+                    <Collapsible open={isExpanded} onOpenChange={() => toggleExpanded(event.id)}>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" className="w-full justify-between mt-2 border border-border">
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-green-500" />
+                              <span className="text-sm font-medium text-green-500">{presenti.length} Presenti</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-red-500" />
+                              <span className="text-sm font-medium text-red-500">{assenti.length} Assenti</span>
+                            </div>
+                          </div>
+                          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-2 space-y-2">
+                        {presenti.length > 0 && (
+                          <div className="text-xs text-muted-foreground bg-green-500/10 p-2 rounded">
+                            <span className="font-medium text-green-500">Presenti: </span>
+                            {presenti.map(p => p.profiles?.name).filter(Boolean).join(', ')}
+                          </div>
+                        )}
+                        {assenti.length > 0 && (
+                          <div className="text-xs text-muted-foreground bg-red-500/10 p-2 rounded">
+                            <span className="font-medium text-red-500">Assenti: </span>
+                            {assenti.map(p => p.profiles?.name).filter(Boolean).join(', ')}
+                          </div>
+                        )}
+                        {presenti.length === 0 && assenti.length === 0 && (
+                          <div className="text-xs text-muted-foreground text-center py-2">
+                            Nessuna risposta ancora
+                          </div>
+                        )}
+                      </CollapsibleContent>
+                    </Collapsible>
                   </CardContent>
                 </Card>
               );
