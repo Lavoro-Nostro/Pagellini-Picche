@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar, Clock, MapPin, CheckCircle, XCircle } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, MapPin, CheckCircle, XCircle, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -26,11 +27,12 @@ interface Event {
   is_active: boolean;
 }
 
-interface Attendance {
+interface AttendanceRecord {
   id: string;
   event_id: string;
   user_id: string;
-  status: AttendanceStatus;
+  status: string;
+  profiles: { name: string } | null;
 }
 
 const EventsList = () => {
@@ -39,6 +41,7 @@ const EventsList = () => {
   const queryClient = useQueryClient();
   const { teamId } = usePlayerTeam();
   const { user } = useAuth();
+  const [expandedEvents, setExpandedEvents] = useState<Record<string, boolean>>({});
 
   const { data: events, isLoading } = useQuery({
     queryKey: ['player-events', teamId],
@@ -80,11 +83,43 @@ const EventsList = () => {
     enabled: !!user?.id
   });
 
+  const { data: allAttendance } = useQuery({
+    queryKey: ['all-event-attendance', teamId],
+    queryFn: async () => {
+      if (!teamId || !events) return {};
+      
+      const eventIds = events.map(e => e.id);
+      if (eventIds.length === 0) return {};
+      
+      const { data, error } = await supabase
+        .from('event_attendance')
+        .select(`
+          id,
+          event_id,
+          user_id,
+          status,
+          profiles:user_id (name)
+        `)
+        .in('event_id', eventIds);
+      
+      if (error) throw error;
+      
+      const grouped: Record<string, AttendanceRecord[]> = {};
+      (data || []).forEach((att) => {
+        const record = att as unknown as AttendanceRecord;
+        if (!grouped[record.event_id]) grouped[record.event_id] = [];
+        grouped[record.event_id].push(record);
+      });
+      
+      return grouped;
+    },
+    enabled: !!teamId && !!events
+  });
+
   const voteMutation = useMutation({
     mutationFn: async ({ eventId, status }: { eventId: string; status: AttendanceStatus }) => {
       if (!user?.id) throw new Error('Utente non autenticato');
       
-      // Check if vote exists
       const { data: existing } = await supabase
         .from('event_attendance')
         .select('id')
@@ -93,7 +128,6 @@ const EventsList = () => {
         .maybeSingle();
       
       if (existing) {
-        // Update existing vote
         const { error } = await supabase
           .from('event_attendance')
           .update({ status, updated_at: new Date().toISOString() })
@@ -101,7 +135,6 @@ const EventsList = () => {
         
         if (error) throw error;
       } else {
-        // Insert new vote
         const { error } = await supabase
           .from('event_attendance')
           .insert({
@@ -115,6 +148,7 @@ const EventsList = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['all-event-attendance'] });
       toast({ title: "Risposta registrata" });
     },
     onError: (error) => {
@@ -125,6 +159,10 @@ const EventsList = () => {
       });
     }
   });
+
+  const toggleExpanded = (eventId: string) => {
+    setExpandedEvents(prev => ({ ...prev, [eventId]: !prev[eventId] }));
+  };
 
   const getEventTypeLabel = (type: EventType) => {
     switch (type) {
@@ -166,6 +204,10 @@ const EventsList = () => {
           <div className="space-y-4">
             {events?.map((event) => {
               const currentStatus = myAttendance?.[event.id];
+              const attendance = allAttendance?.[event.id] || [];
+              const presenti = attendance.filter(a => a.status === 'presente');
+              const assenti = attendance.filter(a => a.status === 'assente');
+              const isExpanded = expandedEvents[event.id];
               
               return (
                 <Card key={event.id}>
@@ -225,6 +267,44 @@ const EventsList = () => {
                         Assente
                       </Button>
                     </div>
+
+                    {/* Attendance Summary */}
+                    <Collapsible open={isExpanded} onOpenChange={() => toggleExpanded(event.id)}>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" className="w-full justify-between mt-2 border border-border">
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-green-500" />
+                              <span className="text-sm font-medium text-green-500">{presenti.length}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-red-500" />
+                              <span className="text-sm font-medium text-red-500">{assenti.length}</span>
+                            </div>
+                          </div>
+                          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-2 space-y-2">
+                        {presenti.length > 0 && (
+                          <div className="text-xs text-muted-foreground bg-green-500/10 p-2 rounded">
+                            <span className="font-medium text-green-500">Presenti: </span>
+                            {presenti.map(p => p.profiles?.name).filter(Boolean).join(', ')}
+                          </div>
+                        )}
+                        {assenti.length > 0 && (
+                          <div className="text-xs text-muted-foreground bg-red-500/10 p-2 rounded">
+                            <span className="font-medium text-red-500">Assenti: </span>
+                            {assenti.map(p => p.profiles?.name).filter(Boolean).join(', ')}
+                          </div>
+                        )}
+                        {presenti.length === 0 && assenti.length === 0 && (
+                          <div className="text-xs text-muted-foreground text-center py-2">
+                            Nessuna risposta ancora
+                          </div>
+                        )}
+                      </CollapsibleContent>
+                    </Collapsible>
                   </CardContent>
                 </Card>
               );
