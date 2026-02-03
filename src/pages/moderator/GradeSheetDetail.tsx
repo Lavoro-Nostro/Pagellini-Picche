@@ -15,9 +15,11 @@ import { devLog } from '@/lib/devLog';
 import { validateGradeSheet } from '@/lib/validation';
 import { PLAYER_ROLE_MAP, ROLE_DISPLAY_NAMES, type PlayerRole } from '@/lib/playerRoles';
 import { downloadGradeSheetAsPng } from '@/lib/gradeSheetImage';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface PlayerGrade {
   id: string;
+  player_id: string | null;
   player_name: string;
   player_role: string | null;
   voto_generale: number | null;
@@ -43,9 +45,9 @@ interface GradeSheet {
 const GradeSheetDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const queryClient = useQueryClient();
   const [sheet, setSheet] = useState<GradeSheet | null>(null);
   const [grades, setGrades] = useState<PlayerGrade[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editNote, setEditNote] = useState('');
   const [editDate, setEditDate] = useState('');
@@ -55,12 +57,10 @@ const GradeSheetDetail = () => {
   const [selectedMvp, setSelectedMvp] = useState<string | null>(null);
   const gradeSheetRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (id) fetchSheet();
-  }, [id]);
-
-  const fetchSheet = async () => {
-    try {
+  const { data, isLoading } = useQuery({
+    queryKey: ['grade-sheet-detail', id],
+    queryFn: async () => {
+      if (!id) throw new Error('Missing grade sheet id');
       const { data: sheetData, error: sheetError } = await supabase
         .from('grade_sheets')
         .select('id, sheet_date, note, sheet_category, gym_location, match_result, set_scores')
@@ -68,78 +68,78 @@ const GradeSheetDetail = () => {
         .single();
 
       if (sheetError) throw sheetError;
-      
-      // Parse set_scores if it's a string
+
       const parsedSheet = {
         ...sheetData,
-        set_scores: typeof sheetData.set_scores === 'string' 
-          ? JSON.parse(sheetData.set_scores) 
+        set_scores: typeof sheetData.set_scores === 'string'
+          ? JSON.parse(sheetData.set_scores)
           : sheetData.set_scores,
-      };
-      
-      setSheet(parsedSheet);
-      setEditNote(sheetData.note || '');
-      setEditDate(sheetData.sheet_date);
+      } as GradeSheet;
 
       const { data: gradesData, error: gradesError } = await supabase
         .from('player_grades')
-        .select('id, player_name, player_role, voto_generale, commento, is_mvp')
+        .select('id, player_id, player_name, player_role, voto_generale, commento, is_mvp')
         .eq('grade_sheet_id', id)
         .order('player_name');
 
       if (gradesError) throw gradesError;
-      setGrades(gradesData || []);
 
-      // Find current MVP
-      const currentMvp = (gradesData || []).find(g => g.is_mvp);
-      setSelectedMvp(currentMvp?.id || null);
+      return { sheet: parsedSheet, grades: (gradesData || []) as PlayerGrade[] };
+    },
+    enabled: !!id,
+  });
 
-      // Initialize edit grades and comments
-      const initialEditGrades: Record<string, number | null> = {};
-      const initialEditComments: Record<string, string> = {};
-      (gradesData || []).forEach((g: PlayerGrade) => {
-        initialEditGrades[g.player_name] = g.voto_generale;
-        initialEditComments[g.player_name] = g.commento || '';
-      });
-      setEditGrades(initialEditGrades);
-      setEditComments(initialEditComments);
-    } catch (error) {
-      devLog.error('Error fetching sheet:', error);
-      toast.error('Errore nel caricamento');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  useEffect(() => {
+    if (!data) return;
+    setSheet(data.sheet);
+    setGrades(data.grades);
+    setEditNote(data.sheet.note || '');
+    setEditDate(data.sheet.sheet_date);
 
-  const setGrade = (player: string, value: number | null) => {
-    setEditGrades(prev => ({ ...prev, [player]: value }));
+    const currentMvp = data.grades.find(g => g.is_mvp);
+    setSelectedMvp(currentMvp?.id || null);
+
+    const initialEditGrades: Record<string, number | null> = {};
+    const initialEditComments: Record<string, string> = {};
+    data.grades.forEach((g) => {
+      const key = g.player_id ?? g.player_name;
+      initialEditGrades[key] = g.voto_generale;
+      initialEditComments[key] = g.commento || '';
+    });
+    setEditGrades(initialEditGrades);
+    setEditComments(initialEditComments);
+  }, [data]);
+
+  const setGrade = (playerKey: string, value: number | null) => {
+    setEditGrades(prev => ({ ...prev, [playerKey]: value }));
   };
 
   const handleMvpVote = async (gradeId: string) => {
     try {
-      // First, remove MVP from all players in this sheet
-      const { error: clearError } = await supabase
-        .from('player_grades')
-        .update({ is_mvp: false })
-        .eq('grade_sheet_id', id);
-
-      if (clearError) throw clearError;
-
+      if (!id) {
+        toast.error('Pagellino non valido');
+        return;
+      }
       // If clicking the same player, just clear (toggle off)
       if (selectedMvp === gradeId) {
+        const { error } = await supabase.rpc('set_grade_sheet_mvp', {
+          p_grade_sheet_id: id,
+          p_grade_id: null,
+        });
+        if (error) throw error;
+
         setSelectedMvp(null);
         setGrades(prev => prev.map(g => ({ ...g, is_mvp: false })));
         toast.success('MVP rimosso');
         return;
       }
 
-      // Set new MVP
-      const { error: setError } = await supabase
-        .from('player_grades')
-        .update({ is_mvp: true })
-        .eq('id', gradeId);
-
-      if (setError) throw setError;
+      // Set new MVP atomically
+      const { error } = await supabase.rpc('set_grade_sheet_mvp', {
+        p_grade_sheet_id: id,
+        p_grade_id: gradeId,
+      });
+      if (error) throw error;
 
       setSelectedMvp(gradeId);
       setGrades(prev => prev.map(g => ({ ...g, is_mvp: g.id === gradeId })));
@@ -161,8 +161,9 @@ const GradeSheetDetail = () => {
 
     // Check if any player has a comment but no grade
     for (const grade of grades) {
-      const playerComment = editComments[grade.player_name]?.trim();
-      const playerGradeValue = editGrades[grade.player_name];
+      const gradeKey = grade.player_id ?? grade.player_name;
+      const playerComment = editComments[gradeKey]?.trim();
+      const playerGradeValue = editGrades[gradeKey];
       
       if (playerComment && playerGradeValue === null) {
         toast.error(`${grade.player_name} ha un commento ma nessun voto`);
@@ -183,18 +184,22 @@ const GradeSheetDetail = () => {
 
       if (sheetError) throw sheetError;
 
-      // Update player grades
-      for (const grade of grades) {
-        const votoGenerale = editGrades[grade.player_name];
-        const playerComment = editComments[grade.player_name]?.trim() || null;
-        
+      // Update player grades in a single batch
+      const gradeUpdates = grades.map((grade) => {
+        const gradeKey = grade.player_id ?? grade.player_name;
+        return {
+          id: grade.id,
+          grade_sheet_id: id,
+          player_name: grade.player_name,
+          voto_generale: editGrades[gradeKey],
+          commento: editComments[gradeKey]?.trim() || null,
+        };
+      });
+
+      if (gradeUpdates.length > 0) {
         const { error: gradeError } = await supabase
           .from('player_grades')
-          .update({
-            voto_generale: votoGenerale,
-            commento: playerComment,
-          })
-          .eq('id', grade.id);
+          .upsert(gradeUpdates, { onConflict: 'id' });
 
         if (gradeError) throw gradeError;
       }
@@ -202,11 +207,14 @@ const GradeSheetDetail = () => {
       toast.success('Pagellino aggiornato! Generazione immagine...');
       
       // Prepare grades data for image generation
-      const gradesForImage = grades.map(g => ({
-        player_name: g.player_name,
-        voto_generale: editGrades[g.player_name] ?? g.voto_generale,
-        commento: editComments[g.player_name]?.trim() || null,
-      }));
+      const gradesForImage = grades.map(g => {
+        const gradeKey = g.player_id ?? g.player_name;
+        return {
+          player_name: g.player_name,
+          voto_generale: editGrades[gradeKey] ?? g.voto_generale,
+          commento: editComments[gradeKey]?.trim() || null,
+        };
+      });
       
       // Generate and download PNG
       setTimeout(async () => {
@@ -222,7 +230,7 @@ const GradeSheetDetail = () => {
         if (success) {
           toast.success('Immagine scaricata!');
         }
-        await fetchSheet();
+        await queryClient.invalidateQueries({ queryKey: ['grade-sheet-detail', id] });
         setIsEditing(false);
       }, 500);
 
@@ -435,13 +443,13 @@ const GradeSheetDetail = () => {
                       <div className="space-y-2">
                         <label className="text-sm text-muted-foreground">Commento (opzionale)</label>
                         <Textarea
-                          value={editComments[grade.player_name] || ''}
-                          onChange={(e) => setEditComments(prev => ({ ...prev, [grade.player_name]: e.target.value }))}
+                          value={editComments[grade.player_id ?? grade.player_name] || ''}
+                          onChange={(e) => setEditComments(prev => ({ ...prev, [grade.player_id ?? grade.player_name]: e.target.value }))}
                           placeholder="Aggiungi un commento per questo giocatore..."
                           maxLength={300}
                           className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[60px]"
                         />
-                        <p className="text-xs text-muted-foreground">{(editComments[grade.player_name] || '').length}/300</p>
+                        <p className="text-xs text-muted-foreground">{(editComments[grade.player_id ?? grade.player_name] || '').length}/300</p>
                       </div>
                       
                       <div className="space-y-2">
@@ -450,14 +458,14 @@ const GradeSheetDetail = () => {
                           {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
                             <Button
                               key={num}
-                              variant={editGrades[grade.player_name] === num ? 'default' : 'outline'}
+                              variant={editGrades[grade.player_id ?? grade.player_name] === num ? 'default' : 'outline'}
                               size="sm"
                               className={`w-10 h-10 p-0 text-sm ${
-                                editGrades[grade.player_name] === num 
+                                editGrades[grade.player_id ?? grade.player_name] === num 
                                   ? 'gradient-primary text-primary-foreground' 
                                   : 'border-border text-foreground hover:bg-muted'
                               }`}
-                              onClick={() => setGrade(grade.player_name, editGrades[grade.player_name] === num ? null : num)}
+                              onClick={() => setGrade(grade.player_id ?? grade.player_name, editGrades[grade.player_id ?? grade.player_name] === num ? null : num)}
                             >
                               {num}
                             </Button>

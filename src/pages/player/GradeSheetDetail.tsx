@@ -11,9 +11,11 @@ import { it } from 'date-fns/locale';
 import { devLog } from '@/lib/devLog';
 import { PLAYER_ROLE_MAP, ROLE_DISPLAY_NAMES, type PlayerRole } from '@/lib/playerRoles';
 import MvpVoting from '@/components/MvpVoting';
+import { useQuery } from '@tanstack/react-query';
 
 interface PlayerGrade {
   id: string;
+  player_id: string | null;
   player_name: string;
   player_role: string | null;
   voto_generale: number | null;
@@ -41,14 +43,11 @@ const GradeSheetDetail = () => {
   const { profile } = useAuth();
   const [sheet, setSheet] = useState<GradeSheet | null>(null);
   const [grades, setGrades] = useState<PlayerGrade[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (id) fetchSheet();
-  }, [id]);
-
-  const fetchSheet = async () => {
-    try {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['player-grade-sheet-detail', id],
+    queryFn: async () => {
+      if (!id) throw new Error('Missing grade sheet id');
       const { data: sheetData, error: sheetError } = await supabase
         .from('grade_sheets')
         .select('id, sheet_date, note, sheet_category, gym_location, match_result, set_scores')
@@ -56,36 +55,50 @@ const GradeSheetDetail = () => {
         .single();
 
       if (sheetError) throw sheetError;
-      
-      // Parse set_scores if it's a string
+
       const parsedSheet = {
         ...sheetData,
-        set_scores: typeof sheetData.set_scores === 'string' 
-          ? JSON.parse(sheetData.set_scores) 
+        set_scores: typeof sheetData.set_scores === 'string'
+          ? JSON.parse(sheetData.set_scores)
           : sheetData.set_scores,
-      };
-      
-      setSheet(parsedSheet);
+      } as GradeSheet;
 
       const { data: gradesData, error: gradesError } = await supabase
         .from('player_grades')
-        .select('id, player_name, player_role, voto_generale, commento')
+        .select('id, player_id, player_name, player_role, voto_generale, commento')
         .eq('grade_sheet_id', id)
         .order('player_name');
 
       if (gradesError) throw gradesError;
-      setGrades(gradesData || []);
-    } catch (error) {
-      devLog.error('Error fetching sheet:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
+      return { sheet: parsedSheet, grades: (gradesData || []) as PlayerGrade[] };
+    },
+    enabled: !!id,
+  });
+
+  useEffect(() => {
+    if (!data) return;
+    setSheet(data.sheet);
+    setGrades(data.grades);
+  }, [data]);
 
   if (isLoading) {
     return (
       <div className="min-h-screen gradient-dark flex items-center justify-center">
         <p className="text-muted-foreground">Caricamento...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen gradient-dark flex items-center justify-center p-6">
+        <div className="max-w-md text-center space-y-3">
+          <p className="text-foreground font-semibold">Errore nel caricamento</p>
+          <p className="text-sm text-muted-foreground">
+            {(error as Error).message || 'Errore sconosciuto'}
+          </p>
+        </div>
       </div>
     );
   }
@@ -174,7 +187,7 @@ const GradeSheetDetail = () => {
 
         <div className="space-y-3">
           {grades.map(grade => {
-            const isCurrentPlayer = grade.player_name === profile?.name;
+            const isCurrentPlayer = grade.player_id ? grade.player_id === profile?.id : grade.player_name === profile?.name;
             const role = (grade.player_role as PlayerRole) || PLAYER_ROLE_MAP[grade.player_name];
 
             return (

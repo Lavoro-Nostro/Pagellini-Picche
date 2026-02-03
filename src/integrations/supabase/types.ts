@@ -249,6 +249,7 @@ export type Database = {
           created_at: string
           grade_sheet_id: string
           id: string
+          voted_player_id: string | null
           voted_player_name: string
           voter_id: string
         }
@@ -256,6 +257,7 @@ export type Database = {
           created_at?: string
           grade_sheet_id: string
           id?: string
+          voted_player_id?: string | null
           voted_player_name: string
           voter_id: string
         }
@@ -263,6 +265,7 @@ export type Database = {
           created_at?: string
           grade_sheet_id?: string
           id?: string
+          voted_player_id?: string | null
           voted_player_name?: string
           voter_id?: string
         }
@@ -272,6 +275,13 @@ export type Database = {
             columns: ["grade_sheet_id"]
             isOneToOne: false
             referencedRelation: "grade_sheets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mvp_votes_voted_player_id_fkey"
+            columns: ["voted_player_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -323,6 +333,7 @@ export type Database = {
           id: string
           is_mvp: boolean
           muri: number | null
+          player_id: string | null
           player_name: string
           player_role: string | null
           ricezione: number | null
@@ -342,6 +353,7 @@ export type Database = {
           id?: string
           is_mvp?: boolean
           muri?: number | null
+          player_id?: string | null
           player_name: string
           player_role?: string | null
           ricezione?: number | null
@@ -361,6 +373,7 @@ export type Database = {
           id?: string
           is_mvp?: boolean
           muri?: number | null
+          player_id?: string | null
           player_name?: string
           player_role?: string | null
           ricezione?: number | null
@@ -373,6 +386,13 @@ export type Database = {
             columns: ["grade_sheet_id"]
             isOneToOne: false
             referencedRelation: "grade_sheets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_grades_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -495,6 +515,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      set_grade_sheet_mvp: {
+        Args: { p_grade_id: string | null; p_grade_sheet_id: string }
+        Returns: void
       }
     }
     Enums: {

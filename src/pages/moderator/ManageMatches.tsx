@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,9 @@ const ManageMatches = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [showPast, setShowPast] = useState(false);
+  const [showCancelled, setShowCancelled] = useState(true);
 
   const [formData, setFormData] = useState({
     match_date: '',
@@ -47,7 +50,7 @@ const ManageMatches = () => {
     notes: ''
   });
 
-  const fetchMatches = async () => {
+  const fetchMatches = useCallback(async () => {
     if (!teamId) return;
     
     const { data } = await supabase
@@ -59,13 +62,13 @@ const ManageMatches = () => {
     
     setMatches(data || []);
     setIsLoading(false);
-  };
+  }, [teamId]);
 
   useEffect(() => {
     if (teamId) {
       fetchMatches();
     }
-  }, [teamId]);
+  }, [teamId, fetchMatches]);
 
   const openEditDialog = (match: Match) => {
     setEditingMatch(match);
@@ -175,6 +178,16 @@ const ManageMatches = () => {
   };
 
   const today = new Date().toISOString().split('T')[0];
+  const filteredMatches = matches.filter((match) => {
+    const isPast = match.match_date < today;
+    const matchesSearch =
+      match.opponent.toLowerCase().includes(searchText.toLowerCase()) ||
+      match.location_name.toLowerCase().includes(searchText.toLowerCase()) ||
+      match.location_address.toLowerCase().includes(searchText.toLowerCase());
+    const matchesPast = showPast || !isPast;
+    const matchesCancelled = showCancelled || !match.is_cancelled;
+    return matchesSearch && matchesPast && matchesCancelled;
+  });
 
   return (
     <div className="min-h-screen gradient-dark p-6">
@@ -200,6 +213,32 @@ const ManageMatches = () => {
           </Button>
         </div>
 
+        <div className="bg-card/50 rounded-xl p-4 border border-border/50 space-y-4">
+          <div className="space-y-2">
+            <Label>Cerca</Label>
+            <Input
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              placeholder="Avversario o luogo"
+              className="bg-background border-border"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Mostra partite passate</Label>
+            <Switch
+              checked={showPast}
+              onCheckedChange={(checked) => setShowPast(checked)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Mostra annullate</Label>
+            <Switch
+              checked={showCancelled}
+              onCheckedChange={(checked) => setShowCancelled(checked)}
+            />
+          </div>
+        </div>
+
         {isLoading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
@@ -210,13 +249,13 @@ const ManageMatches = () => {
               </div>
             ))}
           </div>
-        ) : matches.length === 0 ? (
+        ) : filteredMatches.length === 0 ? (
           <div className="bg-card/50 rounded-xl p-6 border border-border/50 text-center">
-            <p className="text-muted-foreground">Nessuna partita in programma</p>
+            <p className="text-muted-foreground">Nessuna partita trovata</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {matches.map((match) => {
+            {filteredMatches.map((match) => {
               const isPast = match.match_date < today;
               const matchDate = new Date(`${match.match_date}T${match.match_time}`);
               const formattedDate = format(matchDate, "EEEE d MMMM yyyy", { locale: it });

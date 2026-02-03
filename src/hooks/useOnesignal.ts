@@ -88,51 +88,16 @@ export const sendPushNotification = async (
   message: string
 ): Promise<boolean> => {
   try {
-    // Get OneSignal settings for this team
-    const { data: settings, error: settingsError } = await supabase
-      .from('moderator_settings')
-      .select('onesignal_app_id, onesignal_rest_api_key')
-      .eq('team_id', teamId)
-      .maybeSingle();
-
-    if (settingsError || !settings?.onesignal_app_id || !settings?.onesignal_rest_api_key) {
-      devLog.warn('OneSignal not configured for this team');
-      return false;
-    }
-
-    // Get all player IDs in this team
-    const { data: players, error: playersError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('team_id', teamId);
-
-    if (playersError || !players?.length) {
-      devLog.warn('No players found for team');
-      return false;
-    }
-
-    const playerIds = players.map(p => p.id);
-
-    // Send notification via OneSignal REST API
-    const response = await fetch('https://onesignal.com/api/v1/notifications', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${settings.onesignal_rest_api_key}`,
-      },
-      body: JSON.stringify({
-        app_id: settings.onesignal_app_id,
-        include_external_user_ids: playerIds,
-        headings: { en: title },
-        contents: { en: message },
-      }),
+    const { data, error } = await supabase.functions.invoke('send-push', {
+      body: { teamId, title, message }
     });
 
-    if (!response.ok) {
-      throw new Error(`OneSignal API error: ${response.status}`);
+    if (error || data?.error) {
+      devLog.warn('Push notification failed:', error?.message || data?.error);
+      return false;
     }
 
-    devLog.log('Push notification sent successfully');
+    devLog.log('Push notification sent successfully via edge function');
     return true;
   } catch (error) {
     devLog.error('Error sending push notification:', error);
