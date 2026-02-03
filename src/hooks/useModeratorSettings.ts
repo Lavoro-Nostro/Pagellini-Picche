@@ -5,6 +5,7 @@ import { devLog } from '@/lib/devLog';
 
 interface ModeratorSettings {
   onesignal_app_id: string | null;
+  onesignal_rest_api_key: string | null;
 }
 
 export const useModeratorSettings = () => {
@@ -22,7 +23,7 @@ export const useModeratorSettings = () => {
       try {
         const { data, error } = await supabase
           .from('moderator_settings')
-          .select('onesignal_app_id')
+          .select('onesignal_app_id, onesignal_rest_api_key')
           .eq('team_id', teamId)
           .maybeSingle();
 

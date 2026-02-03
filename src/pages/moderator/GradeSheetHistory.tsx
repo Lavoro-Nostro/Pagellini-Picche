@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, Calendar, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { devLog } from '@/lib/devLog';
 
 interface GradeSheet {
   id: string;
@@ -16,19 +17,28 @@ interface GradeSheet {
 
 const GradeSheetHistory = () => {
   const navigate = useNavigate();
-  const { data: sheets = [], isLoading } = useQuery({
-    queryKey: ['moderator-grade-sheets'],
-    queryFn: async () => {
+  const [sheets, setSheets] = useState<GradeSheet[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchSheets();
+  }, []);
+
+  const fetchSheets = async () => {
+    try {
       const { data, error } = await supabase
         .from('grade_sheets')
-        .select('id, sheet_date, note, created_at')
+        .select('*')
         .order('sheet_date', { ascending: false });
 
       if (error) throw error;
-      return (data || []) as GradeSheet[];
-    },
-    staleTime: 60_000,
-  });
+      setSheets(data || []);
+    } catch (error) {
+      devLog.error('Error fetching sheets:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen gradient-dark p-4">

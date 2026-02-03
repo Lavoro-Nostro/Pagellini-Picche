@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -32,7 +32,13 @@ const PlayerDashboard = () => {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchStats = useCallback(async () => {
+  useEffect(() => {
+    if (profile) {
+      fetchStats();
+    }
+  }, [profile]);
+
+  const fetchStats = async () => {
     if (!profile) return;
 
     try {
@@ -50,7 +56,7 @@ const PlayerDashboard = () => {
       const { data: grades, error: gradesError } = await supabase
         .from('player_grades')
         .select('grade_sheet_id, voto_generale')
-        .eq('player_id', profile.id);
+        .eq('player_name', profile.name);
 
       if (gradesError) throw gradesError;
 
@@ -70,24 +76,23 @@ const PlayerDashboard = () => {
       if (matchSheetIds.length > 0) {
         const { data: allVotes, error: votesError } = await supabase
           .from('mvp_votes')
-          .select('voted_player_id, grade_sheet_id')
+          .select('voted_player_name, grade_sheet_id')
           .in('grade_sheet_id', matchSheetIds);
 
         if (!votesError && allVotes) {
           // Group by sheet and find winners
           const sheetVotes: Record<string, Record<string, number>> = {};
-          (allVotes as { voted_player_id: string | null; grade_sheet_id: string }[]).forEach(vote => {
-            if (!vote.voted_player_id) return;
+          (allVotes as { voted_player_name: string; grade_sheet_id: string }[]).forEach(vote => {
             if (!sheetVotes[vote.grade_sheet_id]) {
               sheetVotes[vote.grade_sheet_id] = {};
             }
-            sheetVotes[vote.grade_sheet_id][vote.voted_player_id] = 
-              (sheetVotes[vote.grade_sheet_id][vote.voted_player_id] || 0) + 1;
+            sheetVotes[vote.grade_sheet_id][vote.voted_player_name] = 
+              (sheetVotes[vote.grade_sheet_id][vote.voted_player_name] || 0) + 1;
           });
 
           Object.values(sheetVotes).forEach(playerVotes => {
             const maxVotes = Math.max(...Object.values(playerVotes));
-            if (maxVotes > 0 && playerVotes[profile.id] === maxVotes) {
+            if (maxVotes > 0 && playerVotes[profile.name] === maxVotes) {
               mvpCount++;
             }
           });
@@ -122,13 +127,7 @@ const PlayerDashboard = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [profile]);
-
-  useEffect(() => {
-    if (profile) {
-      fetchStats();
-    }
-  }, [profile, fetchStats]);
+  };
 
   if (isLoading) {
     return (

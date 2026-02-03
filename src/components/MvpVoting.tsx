@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,13 +11,11 @@ import { devLog } from '@/lib/devLog';
 interface MvpVote {
   id: string;
   voter_id: string;
-  voted_player_id: string | null;
   voted_player_name: string;
 }
 
 interface PlayerGrade {
   id: string;
-  player_id: string | null;
   player_name: string;
 }
 
@@ -33,7 +31,11 @@ const MvpVoting = ({ gradeSheetId, grades }: MvpVotingProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isVoting, setIsVoting] = useState(false);
 
-  const fetchVotes = useCallback(async () => {
+  useEffect(() => {
+    fetchVotes();
+  }, [gradeSheetId]);
+
+  const fetchVotes = async () => {
     try {
       const { data, error } = await supabase
         .from('mvp_votes')
@@ -47,30 +49,26 @@ const MvpVoting = ({ gradeSheetId, grades }: MvpVotingProps) => {
 
       // Find current user's vote
       const userVote = typedVotes.find(v => v.voter_id === profile?.id);
-      setMyVote(userVote?.voted_player_id || null);
+      setMyVote(userVote?.voted_player_name || null);
     } catch (error) {
       devLog.error('Error fetching MVP votes:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [gradeSheetId, profile?.id]);
+  };
 
-  useEffect(() => {
-    fetchVotes();
-  }, [fetchVotes]);
-
-  const handleVote = async (playerId: string | null, playerName: string) => {
+  const handleVote = async (playerName: string) => {
     if (!profile?.id) return;
 
     // Can't vote for yourself
-    if (playerId && playerId === profile.id) {
+    if (playerName === profile.name) {
       toast.error('Non puoi votare te stesso!');
       return;
     }
 
     setIsVoting(true);
     try {
-      if (myVote === playerId) {
+      if (myVote === playerName) {
         // Remove vote
         const { error } = await supabase
           .from('mvp_votes')
@@ -86,14 +84,14 @@ const MvpVoting = ({ gradeSheetId, grades }: MvpVotingProps) => {
         // Update existing vote
         const { error } = await supabase
           .from('mvp_votes')
-          .update({ voted_player_id: playerId, voted_player_name: playerName })
+          .update({ voted_player_name: playerName })
           .eq('grade_sheet_id', gradeSheetId)
           .eq('voter_id', profile.id);
 
         if (error) throw error;
-        setMyVote(playerId);
+        setMyVote(playerName);
         setVotes(prev => prev.map(v => 
-          v.voter_id === profile.id ? { ...v, voted_player_id: playerId, voted_player_name: playerName } : v
+          v.voter_id === profile.id ? { ...v, voted_player_name: playerName } : v
         ));
         toast.success(`Hai votato ${playerName} come MVP!`);
       } else {
@@ -103,14 +101,13 @@ const MvpVoting = ({ gradeSheetId, grades }: MvpVotingProps) => {
           .insert({
             grade_sheet_id: gradeSheetId,
             voter_id: profile.id,
-            voted_player_id: playerId,
             voted_player_name: playerName,
           })
           .select()
           .single();
 
         if (error) throw error;
-        setMyVote(playerId);
+        setMyVote(playerName);
         setVotes(prev => [...prev, data as unknown as MvpVote]);
         toast.success(`Hai votato ${playerName} come MVP!`);
       }
@@ -124,9 +121,7 @@ const MvpVoting = ({ gradeSheetId, grades }: MvpVotingProps) => {
 
   // Calculate vote counts
   const voteCounts = grades.reduce((acc, grade) => {
-    if (grade.player_id) {
-      acc[grade.player_id] = votes.filter(v => v.voted_player_id === grade.player_id).length;
-    }
+    acc[grade.player_name] = votes.filter(v => v.voted_player_name === grade.player_name).length;
     return acc;
   }, {} as Record<string, number>);
 
@@ -135,7 +130,7 @@ const MvpVoting = ({ gradeSheetId, grades }: MvpVotingProps) => {
   const mvpPlayers = maxVotes > 0 
     ? Object.entries(voteCounts)
         .filter(([, count]) => count === maxVotes)
-        .map(([playerId]) => playerId)
+        .map(([name]) => name)
     : [];
 
   if (isLoading) {
@@ -162,19 +157,19 @@ const MvpVoting = ({ gradeSheetId, grades }: MvpVotingProps) => {
           Hai diritto a 1 voto. Clicca su un giocatore per votarlo MVP.
         </p>
         <div className="flex flex-wrap gap-2">
-        {grades.map(grade => {
-            const isMyVote = !!grade.player_id && myVote === grade.player_id;
-            const isMvp = !!grade.player_id && mvpPlayers.includes(grade.player_id);
-            const voteCount = grade.player_id ? voteCounts[grade.player_id] || 0 : 0;
-            const isMe = !!grade.player_id && grade.player_id === profile?.id;
+          {grades.map(grade => {
+            const isMyVote = myVote === grade.player_name;
+            const isMvp = mvpPlayers.includes(grade.player_name);
+            const voteCount = voteCounts[grade.player_name] || 0;
+            const isMe = grade.player_name === profile?.name;
 
             return (
               <Button
                 key={grade.id}
                 variant={isMyVote ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => handleVote(grade.player_id, grade.player_name)}
-                disabled={isVoting || isMe || !grade.player_id}
+                onClick={() => handleVote(grade.player_name)}
+                disabled={isVoting || isMe}
                 className={`relative ${
                   isMyVote 
                     ? 'bg-yellow-500 text-black hover:bg-yellow-600' 
@@ -204,10 +199,7 @@ const MvpVoting = ({ gradeSheetId, grades }: MvpVotingProps) => {
           <div className="pt-2 border-t border-border">
             <p className="text-sm text-foreground">
               <span className="text-yellow-500 font-semibold">MVP: </span>
-              {mvpPlayers
-                .map((playerId) => grades.find((g) => g.player_id === playerId)?.player_name)
-                .filter(Boolean)
-                .join(', ')} 
+              {mvpPlayers.join(', ')} 
               <span className="text-muted-foreground"> ({maxVotes} vot{maxVotes === 1 ? 'o' : 'i'})</span>
             </p>
           </div>

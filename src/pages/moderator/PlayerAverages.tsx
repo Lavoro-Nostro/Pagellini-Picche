@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,7 +20,13 @@ const PlayerAverages = () => {
   const [stats, setStats] = useState<PlayerStats[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchStats = useCallback(async () => {
+  useEffect(() => {
+    if (teamId) {
+      fetchStats();
+    }
+  }, [teamId]);
+
+  const fetchStats = async () => {
     if (!teamId) return;
 
     try {
@@ -92,13 +98,7 @@ const PlayerAverages = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [teamId]);
-
-  useEffect(() => {
-    if (teamId) {
-      fetchStats();
-    }
-  }, [teamId, fetchStats]);
+  };
 
   return (
     <div className="min-h-screen gradient-dark p-4">

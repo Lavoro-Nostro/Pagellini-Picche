@@ -114,8 +114,8 @@ const CreateGradeSheet = () => {
           const initialComments: PlayerComments = {};
           
           teamPlayers.forEach(player => {
-            initialGrades[player.id] = { voto_generale: null };
-            initialComments[player.id] = '';
+            initialGrades[player.name] = { voto_generale: null };
+            initialComments[player.name] = '';
           });
           
           setGrades(initialGrades);
@@ -131,10 +131,10 @@ const CreateGradeSheet = () => {
     fetchPlayers();
   }, [session]);
 
-  const setGrade = (playerId: string, value: number | null) => {
+  const setGrade = (player: string, value: number | null) => {
     setGrades(prev => ({
       ...prev,
-      [playerId]: { voto_generale: value }
+      [player]: { voto_generale: value }
     }));
   };
 
@@ -147,8 +147,8 @@ const CreateGradeSheet = () => {
 
     // Check if any player has a comment but no grade
     for (const player of players) {
-      const playerComment = comments[player.id]?.trim();
-      const playerGrade = grades[player.id];
+      const playerComment = comments[player.name]?.trim();
+      const playerGrade = grades[player.name];
       
       if (playerComment) {
         if (playerGrade?.voto_generale === null || playerGrade?.voto_generale === undefined) {
@@ -196,14 +196,13 @@ const CreateGradeSheet = () => {
       if (sheetError) throw sheetError;
 
       const playerGradesData = players.map(player => {
-        const playerGrade = grades[player.id];
-        const playerComment = comments[player.id]?.trim() || null;
+        const playerGrade = grades[player.name];
+        const playerComment = comments[player.name]?.trim() || null;
         
         if (playerGrade?.voto_generale === null || playerGrade?.voto_generale === undefined) return null;
         
         return {
           grade_sheet_id: sheetData.id,
-          player_id: player.id,
           player_name: player.name,
           player_role: player.role,
           voto_generale: playerGrade.voto_generale as number,
@@ -458,13 +457,13 @@ const CreateGradeSheet = () => {
                 <div className="space-y-2">
                   <label className="text-sm text-muted-foreground">Commento (opzionale)</label>
                   <Textarea
-                    value={comments[player.id] || ''}
-                    onChange={(e) => setComments(prev => ({ ...prev, [player.id]: e.target.value }))}
+                    value={comments[player.name] || ''}
+                    onChange={(e) => setComments(prev => ({ ...prev, [player.name]: e.target.value }))}
                     placeholder="Aggiungi un commento per questo giocatore..."
                     maxLength={300}
                     className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[60px]"
                   />
-                  <p className="text-xs text-muted-foreground">{(comments[player.id] || '').length}/300</p>
+                  <p className="text-xs text-muted-foreground">{(comments[player.name] || '').length}/300</p>
                 </div>
                 
                 <div className="space-y-2">
@@ -473,14 +472,14 @@ const CreateGradeSheet = () => {
                     {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
                       <Button
                         key={num}
-                        variant={grades[player.id]?.voto_generale === num ? 'default' : 'outline'}
+                        variant={grades[player.name]?.voto_generale === num ? 'default' : 'outline'}
                         size="sm"
                         className={`w-10 h-10 p-0 text-sm ${
-                          grades[player.id]?.voto_generale === num 
+                          grades[player.name]?.voto_generale === num 
                             ? 'gradient-primary text-primary-foreground' 
                             : 'border-border text-foreground hover:bg-muted'
                         }`}
-                        onClick={() => setGrade(player.id, grades[player.id]?.voto_generale === num ? null : num)}
+                        onClick={() => setGrade(player.name, grades[player.name]?.voto_generale === num ? null : num)}
                       >
                         {num}
                       </Button>

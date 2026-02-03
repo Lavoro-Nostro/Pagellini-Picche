@@ -12,7 +12,6 @@ import { PLAYER_ROLE_MAP, ROLE_DISPLAY_NAMES, type PlayerRole } from '@/lib/play
 
 interface PlayerGrade {
   id: string;
-  player_id: string | null;
   player_name: string;
   player_role: string | null;
   voto_generale: number | null;
@@ -56,7 +55,7 @@ const LatestGradeSheet = () => {
 
       const { data: gradesData, error: gradesError } = await supabase
         .from('player_grades')
-        .select('id, player_id, player_name, player_role, voto_generale, commento')
+        .select('id, player_name, player_role, voto_generale, commento')
         .eq('grade_sheet_id', sheetData.id)
         .order('player_name');
 
@@ -128,7 +127,7 @@ const LatestGradeSheet = () => {
 
         <div className="space-y-3">
           {grades.map(grade => {
-            const isCurrentPlayer = grade.player_id ? grade.player_id === profile?.id : grade.player_name === profile?.name;
+            const isCurrentPlayer = grade.player_name === profile?.name;
             const role = (grade.player_role as PlayerRole) || PLAYER_ROLE_MAP[grade.player_name];
 
             return (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,7 +23,13 @@ const MvpLeaderboard = () => {
   const [mvpCounts, setMvpCounts] = useState<MvpCount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchMvpCounts = useCallback(async () => {
+  useEffect(() => {
+    if (teamId) {
+      fetchMvpCounts();
+    }
+  }, [teamId]);
+
+  const fetchMvpCounts = async () => {
     try {
       // Get all grade sheets for this team that are matches
       const { data: sheets, error: sheetsError } = await supabase
@@ -87,13 +93,7 @@ const MvpLeaderboard = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [teamId]);
-
-  useEffect(() => {
-    if (teamId) {
-      fetchMvpCounts();
-    }
-  }, [teamId, fetchMvpCounts]);
+  };
 
   const getMedalIcon = (index: number) => {
     if (index === 0) return <Trophy className="w-6 h-6 text-yellow-500" />;

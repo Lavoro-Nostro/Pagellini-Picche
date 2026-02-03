@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,8 +36,6 @@ const ManagePlayers = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirmPlayer, setDeleteConfirmPlayer] = useState<Player | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | PlayerRole>('all');
   
   const [newPlayer, setNewPlayer] = useState({
     username: '',
@@ -46,7 +44,11 @@ const ManagePlayers = () => {
     player_role: 'martello' as PlayerRole
   });
 
-  const fetchPlayers = useCallback(async () => {
+  useEffect(() => {
+    fetchPlayers();
+  }, [session]);
+
+  const fetchPlayers = async () => {
     if (!session?.user?.id) return;
 
     try {
@@ -84,11 +86,7 @@ const ManagePlayers = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [session?.user?.id]);
-
-  useEffect(() => {
-    fetchPlayers();
-  }, [fetchPlayers]);
+  };
 
   const handleCreatePlayer = async () => {
     if (!newPlayer.username || !newPlayer.password || !newPlayer.name) {
@@ -203,14 +201,6 @@ const ManagePlayers = () => {
     }
   };
 
-  const filteredPlayers = players.filter((player) => {
-    const matchesSearch =
-      player.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      player.username.toLowerCase().includes(searchText.toLowerCase());
-    const matchesRole = roleFilter === 'all' || player.player_role === roleFilter;
-    return matchesSearch && matchesRole;
-  });
-
   return (
     <div className="min-h-screen gradient-dark p-6">
       <div className="max-w-md mx-auto space-y-6">
@@ -301,40 +291,6 @@ const ManagePlayers = () => {
           </DialogContent>
         </Dialog>
 
-        <Card className="bg-card/50 border-border/50">
-          <CardContent className="pt-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="search">Cerca</Label>
-              <Input
-                id="search"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Nome o username"
-                className="bg-background border-border"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Filtro ruolo</Label>
-              <Select
-                value={roleFilter}
-                onValueChange={(value) => setRoleFilter(value as 'all' | PlayerRole)}
-              >
-                <SelectTrigger className="bg-background border-border">
-                  <SelectValue placeholder="Tutti i ruoli" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tutti i ruoli</SelectItem>
-                  {PLAYER_ROLES.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {ROLE_DISPLAY_NAMES[role]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Edit Role Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="bg-card border-border">
@@ -407,19 +363,19 @@ const ManagePlayers = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Users className="w-5 h-5" />
-              Giocatori ({filteredPlayers.length})
+              Giocatori ({players.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <p className="text-muted-foreground text-center py-4">Caricamento...</p>
-            ) : filteredPlayers.length === 0 ? (
+            ) : players.length === 0 ? (
               <p className="text-muted-foreground text-center py-4">
-                Nessun giocatore trovato
+                Nessun giocatore nella squadra
               </p>
             ) : (
               <div className="space-y-2">
-                {filteredPlayers.map((player) => (
+                {players.map((player) => (
                   <div
                     key={player.id}
                     className="flex items-center justify-between p-3 bg-background/50 rounded-lg"

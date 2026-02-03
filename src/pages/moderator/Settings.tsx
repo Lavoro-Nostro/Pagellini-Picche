@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,11 +19,15 @@ const Settings = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [settingsId, setSettingsId] = useState<string | null>(null);
 
-  const fetchSettings = useCallback(async () => {
+  useEffect(() => {
+    if (teamId) fetchSettings();
+  }, [teamId]);
+
+  const fetchSettings = async () => {
     try {
       const { data, error } = await supabase
         .from('moderator_settings')
-        .select('id, onesignal_app_id')
+        .select('*')
         .eq('team_id', teamId)
         .maybeSingle();
 
@@ -32,18 +36,14 @@ const Settings = () => {
       if (data) {
         setSettingsId(data.id);
         setOnesignalAppId(data.onesignal_app_id || '');
-        setOnesignalRestApiKey('');
+        setOnesignalRestApiKey(data.onesignal_rest_api_key || '');
       }
     } catch (error) {
       devLog.error('Error fetching settings:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [teamId]);
-
-  useEffect(() => {
-    if (teamId) fetchSettings();
-  }, [teamId, fetchSettings]);
+  };
 
   const handleSave = async () => {
     if (!teamId) {
@@ -55,22 +55,13 @@ const Settings = () => {
     try {
       if (settingsId) {
         // Update existing settings
-        const updatePayload: {
-          onesignal_app_id?: string | null;
-          onesignal_rest_api_key?: string | null;
-          updated_at: string;
-        } = {
-          onesignal_app_id: onesignalAppId.trim() || null,
-          updated_at: new Date().toISOString(),
-        };
-
-        if (onesignalRestApiKey.trim()) {
-          updatePayload.onesignal_rest_api_key = onesignalRestApiKey.trim();
-        }
-
         const { error } = await supabase
           .from('moderator_settings')
-          .update(updatePayload)
+          .update({
+            onesignal_app_id: onesignalAppId.trim() || null,
+            onesignal_rest_api_key: onesignalRestApiKey.trim() || null,
+            updated_at: new Date().toISOString(),
+          })
           .eq('id', settingsId);
 
         if (error) throw error;
@@ -152,11 +143,11 @@ const Settings = () => {
                 type="password"
                 value={onesignalRestApiKey}
                 onChange={(e) => setOnesignalRestApiKey(e.target.value)}
-                placeholder="Lascia vuoto per non modificare"
+                placeholder="••••••••••••••••"
                 className="bg-muted border-border text-foreground"
               />
               <p className="text-xs text-muted-foreground">
-                Puoi trovare queste chiavi nella dashboard di OneSignal &rarr; Settings &rarr; Keys &amp; IDs
+                Puoi trovare queste chiavi nella dashboard di OneSignal → Settings → Keys & IDs
               </p>
             </div>
 
